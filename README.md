@@ -83,12 +83,11 @@ Copy skill folders to your project or reference them in your Claude configuratio
 
 ## Design Patterns
 
-See `veille/agent-effectiveness-patterns.md` in Obsidian for effectiveness patterns:
-- Gates (blocking validation)
-- Checklists (tracked validation)
-- Progressive disclosure (just-in-time context)
-- Scripts for deterministic work
-- Phases with checkpoints
+- **Gates** - Blocking validation before advancing
+- **Checklists** - Tracked validation items
+- **Progressive disclosure** - Just-in-time context loading
+- **Deterministic scripts** - Scripts gather data, agents decide
+- **Phases with checkpoints** - Discrete workflow steps
 
 ## Resources
 
