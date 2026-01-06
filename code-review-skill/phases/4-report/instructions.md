@@ -46,8 +46,20 @@ Use the context output to build this report:
 
 ---
 
-Ready to iterate on findings?
+What would you like to do?
+
+1. **Discuss** a specific finding (adjust severity, clarify, merge)
+2. **Continue** to prepare inline comments
 ```
+
+## User actions at this phase
+
+- **Discuss**: Let user explore/adjust findings before moving on
+- **Continue**: Proceed to prepare inline comments for GitHub
+
+**Do NOT offer**:
+- "Generate PR comment" — not at this phase
+- "Finish review" — not at this phase
 
 ## Gate criteria
 
@@ -57,4 +69,4 @@ Ready to iterate on findings?
 ```bash
 "$SKILL_DIR/scripts/review.sh" check-gate
 ```
-Then **wait for user choice** (1-5) before calling `next`.
+Then **wait for user choice** before calling `next`.
