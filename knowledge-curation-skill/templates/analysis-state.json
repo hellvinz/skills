@@ -1,0 +1,55 @@
+{
+  "url": "",
+  "url_slug": "",
+  "phase": 1,
+  "started_at": "",
+  "last_updated": "",
+  "mode": "create",
+  "existing_node_id": null,
+  "resource_metadata": {
+    "title": "",
+    "description": "",
+    "author": "",
+    "published_date": "",
+    "domain": "",
+    "kagi_takeaways": []
+  },
+  "agent_analysis": {
+    "status": "pending",
+    "task_id": null,
+    "started_at": null,
+    "completed_at": null,
+    "contextual_relevance": null,
+    "key_points": [],
+    "connections": [],
+    "suggested_tags": []
+  },
+  "human_analysis": {
+    "status": "pending",
+    "completed_at": null,
+    "key_points": [],
+    "notes": null
+  },
+  "consolidated_summary": {
+    "title": null,
+    "main_idea": null,
+    "key_takeaways": [],
+    "content": null,
+    "agreements": [],
+    "human_additions": [],
+    "agent_additions": [],
+    "approved_at": null
+  },
+  "suggested_tags": [],
+  "suggested_relationships": [],
+  "gates": {
+    "1": null,
+    "2": null,
+    "3": null,
+    "4": null
+  },
+  "result": {
+    "helix_node_id": null,
+    "obsidian_note_path": null
+  }
+}

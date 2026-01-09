@@ -3,7 +3,7 @@
 check: lint test
 
 lint:
-	shellcheck scripts/*.sh code-review-skill/scripts/*.sh code-review-skill/phases/*/*.sh
+	shellcheck scripts/*.sh code-review-skill/scripts/*.sh code-review-skill/phases/*/*.sh knowledge-curation-skill/scripts/*.sh knowledge-curation-skill/phases/*/*.sh
 
 test:
-	bats test/*.bats code-review-skill/test/*.bats
+	bats test/*.bats code-review-skill/test/*.bats knowledge-curation-skill/test/*.bats
