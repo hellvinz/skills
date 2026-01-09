@@ -3,97 +3,37 @@ name: {{SKILL_NAME}}
 description: |
   {{DESCRIPTION}}
 
-  Déclenché par: "{{TRIGGERS}}"
-tools: Read, Grep, Glob, Bash
+  Triggered by: "{{TRIGGERS}}"
+tools: Read, Grep, Glob, Bash, AskUserQuestion
 ---
 
 # {{SKILL_TITLE}}
 
 {{ROLE_DESCRIPTION}}
 
-## Philosophie
+## Getting Started
 
-```
-Entrée  →  Traitement  →  Sortie validée
-```
-
-## Workflow
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  1. CONTEXT │───▶│  2. EXECUTE │───▶│  3. VALIDATE│
-│   Gather    │    │   Process   │    │   Verify    │
-└─────────────┘    └─────────────┘    └─────────────┘
-       │                 │                  │
-       ▼                 ▼                  ▼
-    GATE A            GATE B            GATE C
-```
-
----
-
-## Phase 1 : Context
-
-### 1.1 Collecter le contexte
+When triggered, run:
 
 ```bash
-# Contexte projet
-[ -f CLAUDE.md ] && cat CLAUDE.md
-
-# Contexte spécifique
-# TODO: ajouter les commandes de collecte
+./scripts/workflow.sh next
 ```
 
-### GATE A : Validation du contexte
+This returns the instructions for the current phase. Follow them exactly.
 
-| Check | Status | Action si échec |
-|-------|--------|-----------------|
-| Contexte chargé ? | — | STOP : demander clarification |
+## Workflow Loop
 
----
+1. Run `next` to get current phase instructions
+2. Execute the instructions
+3. Save data via `save` (pipe JSON to stdin)
+4. Run `next` again to advance
+5. Repeat until complete
 
-## Phase 2 : Execute
-
-### 2.1 Traitement principal
-
-TODO: Décrire les étapes de traitement
-
-### GATE B : Validation du traitement
-
-| Check | Status |
-|-------|--------|
-| Traitement terminé ? | — |
-| Résultats valides ? | — |
-
----
-
-## Phase 3 : Validate
-
-### 3.1 Validation finale
+## Commands
 
 ```bash
-# Commandes de validation
-# TODO: ajouter les vérifications
+./scripts/workflow.sh next                           # Get current phase instructions
+echo '{"key": "value"}' | ./scripts/workflow.sh save # Save state
+./scripts/workflow.sh status                         # Check status
+./scripts/workflow.sh clean                          # Reset
 ```
-
-### GATE C : Tout doit passer
-
-| Check | Status | Requis |
-|-------|--------|--------|
-| Validation 1 | — | ✓ |
-| Validation 2 | — | ✓ |
-
----
-
-## Principes
-
-1. **Principe 1** — description
-2. **Principe 2** — description
-3. **Principe 3** — description
-
----
-
-## Références
-
-- `principles/` — Documents de référence
-- `templates/` — Templates de suivi
-- `scripts/` — Scripts d'automatisation
