@@ -29,7 +29,7 @@ Principles + Context (1)  <->  Observed changes (2)  ->  Validated by team tools
 "$SKILL_DIR/scripts/review.sh" status
 ```
 
-- If state exists → resume at indicated phase
+- If state exists → run `next` to resume
 - If no state → initialize:
 
 ```bash
@@ -40,12 +40,18 @@ The `init` command outputs Phase 1 instructions. Follow them.
 
 ### Advancing phases
 
-1. Follow phase instructions
-2. Run `check-gate` to validate
-3. Ask user to confirm
-4. Run `next` to advance
+Simply run `next` after completing phase work:
 
-Use `context` to see current phase state.
+```bash
+"$SKILL_DIR/scripts/review.sh" next
+```
+
+The `next` command automatically:
+1. Checks the current phase gate
+2. If passed → advances to next phase
+3. Returns instructions and context for current phase
+
+Use `gate` to check gate status without advancing.
 
 ## Collaboration Principles
 

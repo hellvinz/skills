@@ -122,40 +122,61 @@ check_gate() {
   fi
 }
 
-advance_phase() {
+cmd_next() {
   if [[ ! -f "$STATE_FILE" ]]; then
-    echo "Error: No review in progress." >&2
+    echo "Error: No review in progress. Run 'init' first." >&2
     exit 1
   fi
 
-  local current_phase
-  current_phase=$(get_current_phase)
+  local phase_num phase_dir
+  phase_num=$(get_current_phase)
+  phase_dir=$(get_phase_dir "$phase_num")
 
-  local gate_passed
-  gate_passed=$(jq -r ".gates[\"$current_phase\"].passed // false" "$STATE_FILE")
+  # Check if current gate passes - if so, advance to next phase
+  if [[ -n "$phase_dir" && -f "$phase_dir/gate.sh" ]]; then
+    if bash "$phase_dir/gate.sh" "$STATE_FILE" "$REVIEW_DIR" "$BRANCH_SAFE" 2>/dev/null; then
+      # Gate passed - record it and advance
+      local next_phase=$((phase_num + 1))
+      local next_dir
+      next_dir=$(get_phase_dir "$next_phase")
 
-  if [[ "$gate_passed" != "true" ]]; then
-    echo "Error: Gate not passed. Run 'check-gate' first." >&2
-    exit 1
+      if [[ -z "$next_dir" ]]; then
+        echo "=== REVIEW COMPLETE ==="
+        echo ""
+        echo "All phases completed for branch: $BRANCH"
+        echo "Use 'clean' to start fresh if needed."
+        exit 0
+      fi
+
+      jq --argjson p "$phase_num" --argjson np "$next_phase" --arg t "$(now)" \
+        '.gates[$p | tostring] = {"passed": true, "at": $t} | .phase = $np | .last_updated = $t' \
+        "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+
+      echo ">>> Gate $phase_num passed. Advanced to phase $next_phase."
+      echo ""
+      phase_num=$next_phase
+      phase_dir=$(get_phase_dir "$phase_num")
+    fi
   fi
 
-  local next_phase=$((current_phase + 1))
-  local next_dir
-  next_dir=$(get_phase_dir "$next_phase")
-
-  if [[ -z "$next_dir" ]]; then
-    echo "Review complete."
-    exit 0
-  fi
-
-  jq --argjson p "$next_phase" --arg t "$(now)" \
-    '.phase = $p | .last_updated = $t' \
-    "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
-
+  # Output current phase header
   local phase_name
-  phase_name=$(basename "$next_dir" | sed 's/^[0-9]*-//')
-  echo "Phase $next_phase: $phase_name"
-  output_phase_instructions "$next_phase"
+  phase_name=$(basename "$phase_dir" | sed 's/^[0-9]*-//')
+  echo "=== PHASE $phase_num: $phase_name ==="
+  echo "Branch: $BRANCH"
+  echo ""
+
+  # Output context from previous phases (if format.sh exists)
+  if [[ "$phase_num" -gt 1 && -f "$phase_dir/format.sh" ]]; then
+    echo "--- CONTEXT FROM PREVIOUS PHASES ---"
+    echo ""
+    bash "$phase_dir/format.sh" "$STATE_FILE"
+    echo ""
+  fi
+
+  # Output instructions
+  echo "--- INSTRUCTIONS ---"
+  output_phase_instructions "$phase_num"
 }
 
 show_context() {
@@ -202,11 +223,11 @@ case "$CMD" in
   get)
     get_value "$1"
     ;;
-  check-gate)
+  gate)
     check_gate
     ;;
   next)
-    advance_phase
+    cmd_next
     ;;
   context)
     show_context
@@ -221,9 +242,9 @@ case "$CMD" in
     echo "Usage: review.sh <command> [args]"
     echo ""
     echo "Workflow commands:"
-    echo "  init                    Start new review"
-    echo "  check-gate              Verify current phase gate"
-    echo "  next                    Advance to next phase"
+    echo "  init                    Start new review (outputs phase 1 instructions)"
+    echo "  next                    Check gate, advance if passed, show instructions"
+    echo "  gate                    Check gate only (without advancing)"
     echo "  context                 Show context for current phase"
     echo "  status                  Show raw state (JSON)"
     echo "  clean                   Remove state and comments files"
