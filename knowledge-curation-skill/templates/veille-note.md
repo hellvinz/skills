@@ -1,8 +1,10 @@
 ---
 title: "{{title}}"
+type: concept
 source: "{{source_url}}"
 created: {{created_date}}
 tags: {{tags_yaml_array}}
+status: raw
 helix_node_id: "{{helix_node_id}}"
 ---
 

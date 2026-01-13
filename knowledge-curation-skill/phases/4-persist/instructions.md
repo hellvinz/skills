@@ -7,6 +7,21 @@
 > **NEVER** create Python scripts, bash wrappers, or any code to call MCP tools.
 > **NEVER** use `uv run`, `python -c`, or import statements.
 
+## Pre-requisite: Read Obsidian Conventions
+
+**BEFORE creating any note**, read the vault conventions:
+
+```
+mcp__obsidian__read_note(path="Bienvenue.md")
+```
+
+Pay attention to:
+- **Tags de navigation (Graph View)** - color conventions (veille=bronze, project=gold)
+- **Conventions frontmatter** - required fields (type, tags, status)
+- **Structure** - where to place files
+
+Apply these conventions when creating notes.
+
 ## Purpose
 
 Save the consolidated knowledge to Helix (knowledge graph) and Obsidian (veille notes), with user confirmation before each write.
@@ -157,7 +172,16 @@ mcp__obsidian__write_note(
 )
 ```
 
-### 10. Save State with Results
+### 10. Update Veille Index
+
+Add the new note to `veille/veille.md` in the appropriate section using `mcp__obsidian__patch_note`.
+
+Table row format:
+```markdown
+| [[{note-filename}]] | raw | {short description} |
+```
+
+### 11. Save State with Results
 
 ```bash
 echo '{
@@ -168,7 +192,7 @@ echo '{
 }' | ./scripts/curation.sh save -u "$URL"
 ```
 
-### 11. Confirm Completion
+### 12. Confirm Completion
 
 ```markdown
 ## Curation Complete
