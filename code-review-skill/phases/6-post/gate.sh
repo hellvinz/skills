@@ -3,8 +3,9 @@
 # Passes if each non-skipped finding has a comment at same file:line
 
 STATE_FILE="$1"
-REVIEW_DIR="$2"
-BRANCH_SAFE="$3"
+REVIEW_DIR=".review"
+BRANCH=$(jq -r '.branch // ""' "$STATE_FILE")
+BRANCH_SAFE="${BRANCH//\//-}"
 
 comments_file="$REVIEW_DIR/comments-${BRANCH_SAFE}.json"
 

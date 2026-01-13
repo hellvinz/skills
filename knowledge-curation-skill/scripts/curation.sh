@@ -14,13 +14,17 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve symlinks to get real path (pwd -P resolves symlinks)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 SKILL_DIR="$(dirname "$SCRIPT_DIR")"
+LIB_DIR="$(dirname "$SKILL_DIR")/scripts/lib"
 STATE_DIR="$SKILL_DIR/.curation"
 PHASES_DIR="$SKILL_DIR/phases"
+TOTAL_PHASES=4
 
-# Phase directory names (source of truth - never expose to LLM)
-declare -a PHASE_DIRS=("" "1-input" "2-analysis" "3-discussion" "4-persist")
+# Source workflow library
+# shellcheck source=../../scripts/lib/workflow.sh
+source "$LIB_DIR/workflow.sh"
 
 # Ensure state directory exists
 mkdir -p "$STATE_DIR"
@@ -40,6 +44,9 @@ Commands:
   state -u URL        Get state file path for URL
   phase -u URL        Get current phase number for URL
   slug -u URL         Generate URL slug
+  next -u URL         Check gate, advance if passed, show instructions
+  gate -u URL         Check gate only
+  save -u URL         Save JSON from stdin to state
 
 Options:
   -u, --url URL       Target URL for the command
@@ -51,18 +58,12 @@ EOF
 
 #######################################
 # Generate URL slug for state file naming
-# Arguments:
-#   URL string
-# Outputs:
-#   Hyphenated slug (max 50 chars)
 #######################################
 url_to_slug() {
     local url="$1"
     local slug="${url#*://}"
     slug="${slug%/}"
-    # Replace non-alphanumeric with hyphens
     slug="${slug//[^a-zA-Z0-9]/-}"
-    # Collapse multiple hyphens (requires loop since bash doesn't support + quantifier)
     while [[ "$slug" == *--* ]]; do
         slug="${slug//--/-}"
     done
@@ -82,48 +83,62 @@ get_state_file() {
 }
 
 #######################################
-# Load state from file
+# Initialize workflow for a URL
 #######################################
-load_state() {
+init_workflow_for_url() {
     local url="$1"
     local state_file
     state_file=$(get_state_file "$url")
+    workflow_init "$state_file" "$PHASES_DIR" "$TOTAL_PHASES" "$url" "URL"
+}
 
-    if [[ -f "$state_file" ]]; then
-        cat "$state_file"
+#######################################
+# Initial state callback - creates state with URL info
+# Called by workflow_cmd_next when no state exists
+#######################################
+workflow_create_initial_state() {
+    local url="$WORKFLOW_IDENTIFIER"
+    local slug now state_file
+    slug=$(url_to_slug "$url")
+    now=$(workflow_now)
+    state_file="$WORKFLOW_STATE_FILE"
+
+    local template="$SKILL_DIR/templates/analysis-state.json"
+    if [[ -f "$template" ]]; then
+        jq --arg url "$url" --arg slug "$slug" --arg now "$now" \
+            '.url = $url | .url_slug = $slug | .started_at = $now | .phase = 1 | .last_updated = $now' \
+            "$template" > "$state_file"
     else
-        echo "{}"
+        echo "{\"url\": \"$url\", \"url_slug\": \"$slug\", \"phase\": 1, \"started_at\": \"$now\", \"last_updated\": \"$now\"}" > "$state_file"
     fi
 }
 
 #######################################
-# Save state to file (exported for use by other scripts)
+# Context callback for progressive disclosure
 #######################################
-save_state() {
-    local url="$1"
-    local state_file
-    state_file=$(get_state_file "$url")
+workflow_get_context() {
+    local phase_num="$1"
+    local state_file="$2"
 
-    if [[ -n "${2:-}" ]]; then
-        echo "$2" > "$state_file"
-    else
-        cat > "$state_file"
-    fi
+    case "$phase_num" in
+        2)
+            jq '{url, mode, resource_metadata}' "$state_file"
+            ;;
+        3)
+            jq '{url, resource_metadata: {title: .resource_metadata.title, kagi_takeaways: .resource_metadata.kagi_takeaways}, agent_analysis, human_analysis}' "$state_file"
+            ;;
+        4)
+            jq '{url, mode, existing_node_id, resource_metadata: {title: .resource_metadata.title}, consolidated_summary, suggested_tags, suggested_relationships}' "$state_file"
+            ;;
+    esac
 }
 
 #######################################
-# Get current phase from state
+# Completion callback
 #######################################
-get_phase() {
-    local url="$1"
-    local state
-    state=$(load_state "$url")
-
-    if [[ "$state" == "{}" ]]; then
-        echo "0"
-    else
-        echo "$state" | jq -r '.phase // 0'
-    fi
+workflow_on_complete() {
+    echo "Curation for this URL has been completed."
+    echo "Use 'clean -u URL' to start fresh if needed."
 }
 
 #######################################
@@ -195,103 +210,7 @@ cmd_status() {
 }
 
 #######################################
-# Next command - returns instructions for current phase
-# This is the ONLY way to get phase instructions (progressive disclosure)
-#######################################
-cmd_next() {
-    local url="$1"
-
-    if [[ -z "$url" ]]; then
-        echo "Error: next requires -u URL"
-        exit 1
-    fi
-
-    local state_file phase phase_dir instructions_file
-    state_file=$(get_state_file "$url")
-
-    # Determine phase: if no state exists, start at phase 1
-    if [[ -f "$state_file" ]]; then
-        phase=$(jq -r '.phase // 1' "$state_file")
-
-        # Check if current gate passes - if so, advance to next phase
-        # (only if phase is within valid range)
-        if [[ "$phase" -le 4 ]]; then
-            local phase_dir_check="${PHASE_DIRS[$phase]}"
-            local gate_script="$PHASES_DIR/$phase_dir_check/gate.sh"
-
-            if [[ -f "$gate_script" ]] && STATE_FILE="$state_file" bash "$gate_script" "$state_file" > /dev/null 2>&1; then
-                # Gate passed - advance
-                local next_phase=$((phase + 1))
-                local now
-                now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-                jq --argjson phase "$next_phase" --arg now "$now" \
-                    '.phase = $phase | .last_updated = $now' "$state_file" > "${state_file}.tmp"
-                mv "${state_file}.tmp" "$state_file"
-
-                echo ">>> Gate $phase passed. Advanced to phase $next_phase."
-                echo ""
-                phase=$next_phase
-            fi
-        fi
-    else
-        phase=1
-    fi
-
-    # Check if workflow complete
-    if [[ "$phase" -gt 4 ]]; then
-        echo "=== WORKFLOW COMPLETE ==="
-        echo ""
-        echo "Curation for this URL has been completed."
-        echo "Use 'clean -u URL' to start fresh if needed."
-        exit 0
-    fi
-
-    # Get phase directory and instructions
-    phase_dir="${PHASE_DIRS[$phase]}"
-    instructions_file="$PHASES_DIR/$phase_dir/instructions.md"
-
-    if [[ ! -f "$instructions_file" ]]; then
-        echo "Error: Instructions not found for phase $phase"
-        exit 1
-    fi
-
-    # Output header with context
-    echo "=== PHASE $phase: ${phase_dir#*-} ==="
-    echo "URL: $url"
-    echo ""
-
-    # Output relevant state data for this phase (progressive disclosure)
-    if [[ -f "$state_file" && "$phase" -gt 1 ]]; then
-        echo "--- CONTEXT FROM PREVIOUS PHASES ---"
-        echo ""
-        case "$phase" in
-            2)
-                # Phase 2 needs: url, resource_metadata
-                jq '{url, mode, resource_metadata}' "$state_file"
-                ;;
-            3)
-                # Phase 3 needs: agent_analysis, human_analysis
-                jq '{url, resource_metadata: {title: .resource_metadata.title, kagi_takeaways: .resource_metadata.kagi_takeaways}, agent_analysis, human_analysis}' "$state_file"
-                ;;
-            4)
-                # Phase 4 needs: consolidated_summary, suggested_tags, suggested_relationships
-                jq '{url, mode, existing_node_id, resource_metadata: {title: .resource_metadata.title}, consolidated_summary, suggested_tags, suggested_relationships}' "$state_file"
-                ;;
-        esac
-        echo ""
-    fi
-
-    echo "--- INSTRUCTIONS ---"
-    echo ""
-
-    # Return the actual instructions content
-    cat "$instructions_file"
-}
-
-#######################################
 # Save command - merge JSON data into state
-# Reads JSON from stdin and deep-merges with existing state
 #######################################
 cmd_save() {
     local url="$1"
@@ -301,10 +220,12 @@ cmd_save() {
         exit 1
     fi
 
+    init_workflow_for_url "$url"
+
     local state_file slug now input_json current_state new_state
     state_file=$(get_state_file "$url")
     slug=$(url_to_slug "$url")
-    now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    now=$(workflow_now)
 
     # Read JSON from stdin
     input_json=$(cat)
@@ -314,7 +235,6 @@ cmd_save() {
         exit 1
     fi
 
-    # Validate input is valid JSON
     if ! echo "$input_json" | jq -e . > /dev/null 2>&1; then
         echo "Error: Invalid JSON provided"
         exit 1
@@ -333,45 +253,12 @@ cmd_save() {
         fi
     fi
 
-    # Deep merge: input overwrites current, update last_updated
+    # Deep merge
     new_state=$(echo "$current_state" | jq --argjson input "$input_json" --arg now "$now" \
         '. * $input | .last_updated = $now')
 
-    # Save
     echo "$new_state" > "$state_file"
     echo "State saved for: $url"
-}
-
-#######################################
-# Gate command - run gate check for current phase
-#######################################
-cmd_gate() {
-    local url="$1"
-
-    if [[ -z "$url" ]]; then
-        echo "Error: gate requires -u URL"
-        exit 1
-    fi
-
-    local state_file phase phase_dir gate_script
-    state_file=$(get_state_file "$url")
-
-    if [[ ! -f "$state_file" ]]; then
-        echo "Error: No state found for this URL. Run 'next' first."
-        exit 1
-    fi
-
-    phase=$(jq -r '.phase // 1' "$state_file")
-    phase_dir="${PHASE_DIRS[$phase]}"
-    gate_script="$PHASES_DIR/$phase_dir/gate.sh"
-
-    if [[ ! -f "$gate_script" ]]; then
-        echo "Error: Gate script not found for phase $phase"
-        exit 1
-    fi
-
-    # Run the gate script with state file path
-    STATE_FILE="$state_file" bash "$gate_script" "$state_file"
 }
 
 #######################################
@@ -416,13 +303,13 @@ main() {
     local all_flag="false"
     local json_flag="false"
 
-    # Parse command (first non-option argument)
+    # Parse command
     if [[ $# -gt 0 && "${1:0:1}" != "-" ]]; then
         cmd="$1"
         shift
     fi
 
-    # Parse options manually for portability (BSD/GNU compatible)
+    # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -u|--url)
@@ -456,7 +343,6 @@ main() {
                 exit 1
                 ;;
             *)
-                # Positional argument after command
                 break
                 ;;
         esac
@@ -471,10 +357,20 @@ main() {
             cmd_clean "$url" "$all_flag"
             ;;
         next)
-            cmd_next "$url"
+            if [[ -z "$url" ]]; then
+                echo "Error: next requires -u URL"
+                exit 1
+            fi
+            init_workflow_for_url "$url"
+            workflow_cmd_next
             ;;
         gate)
-            cmd_gate "$url"
+            if [[ -z "$url" ]]; then
+                echo "Error: gate requires -u URL"
+                exit 1
+            fi
+            init_workflow_for_url "$url"
+            workflow_cmd_gate
             ;;
         save)
             cmd_save "$url"
@@ -491,7 +387,8 @@ main() {
                 echo "Error: phase requires -u URL"
                 exit 1
             fi
-            get_phase "$url"
+            init_workflow_for_url "$url"
+            workflow_get_phase
             ;;
         slug)
             if [[ -z "$url" ]]; then

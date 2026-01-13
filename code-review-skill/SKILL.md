@@ -24,34 +24,22 @@ Principles + Context (1)  <->  Observed changes (2)  ->  Validated by team tools
 
 **IMPORTANT**: All scripts run from the target project directory. Use `$SKILL_DIR` to reference skill scripts.
 
-### Check current state
-```bash
-"$SKILL_DIR/scripts/review.sh" status
-```
-
-- If state exists → run `next` to resume
-- If no state → initialize:
-
-```bash
-"$SKILL_DIR/scripts/review.sh" init
-```
-
-The `init` command outputs Phase 1 instructions. Follow them.
-
-### Advancing phases
-
-Simply run `next` after completing phase work:
-
+### Start or resume
 ```bash
 "$SKILL_DIR/scripts/review.sh" next
 ```
 
 The `next` command automatically:
-1. Checks the current phase gate
-2. If passed → advances to next phase
-3. Returns instructions and context for current phase
+1. Creates state if none exists (no explicit init needed)
+2. Checks the current phase gate
+3. If passed → advances to next phase
+4. Returns instructions and context for current phase
 
-Use `gate` to check gate status without advancing.
+### Other commands
+- `status` — Show raw state (JSON)
+- `gate` — Check gate only (without advancing)
+- `context` — Show formatted context for current phase
+- `clean` — Remove state files
 
 ## Collaboration Principles
 
