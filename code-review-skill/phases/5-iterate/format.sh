@@ -22,4 +22,5 @@ fi
 
 echo ""
 echo "Update findings with:"
-echo "  review.sh set findings '<updated json array>'"
+echo "  update-finding.sh --set <id> status addressed|skipped"
+echo "  update-finding.sh --remove <id>"

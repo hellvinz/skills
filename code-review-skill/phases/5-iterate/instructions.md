@@ -70,12 +70,16 @@ Draft: "{natural comment, 1-2 sentences, with doc link if relevant}"
 
 ## Update findings
 
-After processing each finding, update the findings array with new statuses:
+After processing each finding, update its status immediately:
 ```bash
-"$SKILL_DIR/scripts/review.sh" set findings '[
-  {"id": 1, "file": "src/Button.tsx", "line": 42, "severity": "high", "status": "addressed"},
-  {"id": 2, "file": "src/hooks/useVideo.ts", "line": 15, "severity": "medium", "status": "skipped"}
-]'
+# After "ok" → mark addressed
+"$SKILL_DIR/scripts/update-finding.sh" --set 1 status addressed
+
+# After "skip" → mark skipped
+"$SKILL_DIR/scripts/update-finding.sh" --set 2 status skipped
+
+# Discard a finding entirely
+"$SKILL_DIR/scripts/update-finding.sh" --remove 3
 ```
 
 ## Gate criteria
