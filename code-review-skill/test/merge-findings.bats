@@ -14,7 +14,7 @@ setup() {
 
     export _LOGIN_SHELL_SOURCED=1
 
-    "$REVIEW" init > /dev/null
+    "$REVIEW" next > /dev/null
 }
 
 teardown() {

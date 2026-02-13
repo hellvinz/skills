@@ -143,9 +143,16 @@ Ces principes sont cités en référence lors de la détection d'issues.
 
 ---
 
+## React/Next.js Performance
+
+Pour les fichiers React (.tsx/.jsx) **modifiés dans le diff**, appliquer le skill `react-best-practices` (57 règles Vercel).
+
+---
+
 ## References
 
 - [The Pragmatic Programmer Tips](https://pragprog.com/tips/)
 - [99 Bottles of OOP - Sandi Metz](https://sandimetz.com/99bottles)
 - [Pull Requests - Martin Fowler](https://martinfowler.com/bliki/PullRequest.html)
 - [Refinement Code Review - Martin Fowler](https://martinfowler.com/bliki/RefinementCodeReview.html)
+- [Vercel React Best Practices](https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices)

@@ -49,7 +49,5 @@ After gathering all information, save it:
 | Project context loaded? | WARN: continue but flag it |
 
 ## When ready
-```bash
-"$SKILL_DIR/scripts/review.sh" check-gate
-```
-Then ask user to confirm before calling `next`.
+
+Call `"$SKILL_DIR/scripts/review.sh" next` — it checks the gate and advances automatically.

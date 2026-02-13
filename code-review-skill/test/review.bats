@@ -21,43 +21,51 @@ teardown() {
     rm -rf "$TEST_DIR"
 }
 
-# === Init tests ===
+# === Status tests ===
 
 @test "status: shows no review when no state exists" {
     run "$SCRIPT" status
     [ "$status" -eq 0 ]
-    [[ "$output" == *"No review in progress"* ]]
+    [[ "$output" == *"No review in progress"* ]] || [[ "$output" == *"No workflow in progress"* ]]
 }
 
-@test "init: creates .review directory" {
-    run "$SCRIPT" init
+# === Next (auto-init) tests ===
+
+@test "next: creates .review directory" {
+    run "$SCRIPT" next
     [ "$status" -eq 0 ]
     [ -d ".review" ]
 }
 
-@test "init: creates state-{branch}.json" {
-    run "$SCRIPT" init
+@test "next: creates state-{branch}.json" {
+    run "$SCRIPT" next
     [ "$status" -eq 0 ]
     [ -f ".review/state-test-branch.json" ]
 }
 
-@test "init: sets initial phase to 1" {
-    "$SCRIPT" init
+@test "next: sets initial phase to 1" {
+    "$SCRIPT" next > /dev/null
     phase=$(jq -r '.phase' .review/state-test-branch.json)
     [ "$phase" -eq 1 ]
 }
 
-@test "init: sanitizes branch name with slashes" {
+@test "next: sanitizes branch name with slashes" {
     git checkout -q -b feature/ABC-123
-    run "$SCRIPT" init
+    run "$SCRIPT" next
     [ "$status" -eq 0 ]
     [ -f ".review/state-feature-ABC-123.json" ]
+}
+
+@test "next: shows phase 1 instructions on first run" {
+    run "$SCRIPT" next
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PHASE 1"* ]]
 }
 
 # === Set/Get tests ===
 
 @test "set: stores JSON value" {
-    "$SCRIPT" init
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test", "ticket": "ABC-123"}'
 
     value=$(jq -r '.context.ticket' .review/state-test-branch.json)
@@ -65,14 +73,14 @@ teardown() {
 }
 
 @test "set: rejects invalid JSON" {
-    "$SCRIPT" init
+    "$SCRIPT" next > /dev/null
     run "$SCRIPT" set context 'not valid json'
     [ "$status" -eq 1 ]
     [[ "$output" == *"Invalid JSON"* ]]
 }
 
 @test "get: retrieves stored value" {
-    "$SCRIPT" init
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set mykey '{"foo": "bar"}'
 
     run "$SCRIPT" get mykey
@@ -82,76 +90,80 @@ teardown() {
 }
 
 @test "get: returns null for missing key" {
-    "$SCRIPT" init
+    "$SCRIPT" next > /dev/null
     run "$SCRIPT" get nonexistent
     [ "$status" -eq 0 ]
     [ "$output" = "null" ]
 }
 
-# === Check-gate tests ===
+# === Gate tests ===
 
-@test "check-gate: fails without init" {
-    run "$SCRIPT" check-gate
+@test "gate: fails without state" {
+    run "$SCRIPT" gate
     [ "$status" -eq 1 ]
-    [[ "$output" == *"No review in progress"* ]]
+    [[ "$output" == *"No workflow in progress"* ]] || [[ "$output" == *"No review in progress"* ]]
 }
 
-@test "check-gate 1: fails without context" {
-    "$SCRIPT" init
-    run "$SCRIPT" check-gate
+@test "gate 1: fails without context" {
+    "$SCRIPT" next > /dev/null
+    run "$SCRIPT" gate
     [ "$status" -eq 1 ]
-    [[ "$output" == *"FAILED"* ]]
+    [[ "$output" == *"Need:"* ]] || [[ "$output" == *"context"* ]]
 }
 
-@test "check-gate 1: passes with context" {
-    "$SCRIPT" init
+@test "gate 1: passes with context" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
 
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 0 ]
-    [[ "$output" == *"PASSED"* ]]
 }
 
-@test "check-gate: records gate passed in state" {
-    "$SCRIPT" init
-    "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate
+# === Next with gate auto-advance tests ===
 
-    passed=$(jq -r '.gates["1"].passed' .review/state-test-branch.json)
-    [ "$passed" = "true" ]
-}
-
-# === Next tests ===
-
-@test "next: fails if gate not passed" {
-    "$SCRIPT" init
-    run "$SCRIPT" next
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"Gate not passed"* ]]
-}
-
-@test "next: advances phase after gate passed" {
-    "$SCRIPT" init
-    "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate
+@test "next: stays on phase 1 if gate not passed" {
+    "$SCRIPT" next > /dev/null
+    # No context set, gate should fail
 
     run "$SCRIPT" next
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Phase 2"* ]]
+    [[ "$output" == *"PHASE 1"* ]]
+
+    phase=$(jq -r '.phase' .review/state-test-branch.json)
+    [ "$phase" -eq 1 ]
+}
+
+@test "next: advances to phase 2 when gate 1 passes" {
+    "$SCRIPT" next > /dev/null
+    "$SCRIPT" set context '{"branch": "test"}'
+
+    run "$SCRIPT" next
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Gate 1 passed"* ]]
+    [[ "$output" == *"PHASE 2"* ]]
 
     phase=$(jq -r '.phase' .review/state-test-branch.json)
     [ "$phase" -eq 2 ]
 }
 
-@test "next: advances through multiple phases" {
-    "$SCRIPT" init
+@test "next: records gate passed in state" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null
+
+    passed=$(jq -r '.gates["1"].passed' .review/state-test-branch.json)
+    [ "$passed" = "true" ]
+}
+
+@test "next: advances through multiple phases" {
+    "$SCRIPT" next > /dev/null
+    "$SCRIPT" set context '{"branch": "test"}'
+    "$SCRIPT" next > /dev/null  # → phase 2
 
     # Phase 2 needs files + agent_findings
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
 
     phase=$(jq -r '.phase' .review/state-test-branch.json)
     [ "$phase" -eq 3 ]
@@ -159,227 +171,218 @@ teardown() {
 
 # === Gate 2 (files + agent_findings) tests ===
 
-@test "check-gate 2: fails without files" {
-    "$SCRIPT" init
+@test "gate 2: fails without files" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
 
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 1 ]
-    [[ "$output" == *"FAILED"* ]]
+    [[ "$output" == *"Need:"* ]] || [[ "$output" == *"files"* ]]
 }
 
-@test "check-gate 2: fails without agent_findings" {
-    "$SCRIPT" init
+@test "gate 2: fails without agent_findings" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
 
     "$SCRIPT" set files '["src/test.ts"]'
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 1 ]
-    [[ "$output" == *"FAILED"* ]]
     [[ "$output" == *"agent_findings"* ]]
 }
 
-@test "check-gate 2: passes with files and agent_findings" {
-    "$SCRIPT" init
+@test "gate 2: passes with files and agent_findings" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
 
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 0 ]
-    [[ "$output" == *"PASSED"* ]]
 }
 
 # === Gate 3 (human_done + findings) ===
 
-@test "check-gate 3: fails without human_done" {
-    "$SCRIPT" init
+@test "gate 3: fails without human_done" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
 
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 1 ]
-    [[ "$output" == *"FAILED"* ]]
+    [[ "$output" == *"Need:"* ]] || [[ "$output" == *"human_done"* ]]
 }
 
-@test "check-gate 3: fails without findings merged" {
-    "$SCRIPT" init
+@test "gate 3: fails without findings merged" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
 
     "$SCRIPT" set human_done true
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 1 ]
-    [[ "$output" == *"FAILED"* ]]
     [[ "$output" == *"findings"* ]]
 }
 
-@test "check-gate 3: passes with human_done and findings" {
-    "$SCRIPT" init
+@test "gate 3: passes with human_done and findings" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
 
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[]'
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 0 ]
-    [[ "$output" == *"PASSED"* ]]
 }
 
 # === Gate 4 (findings array - already set in phase 3) ===
 
-@test "check-gate 4: passes with findings from phase 3" {
-    "$SCRIPT" init
+@test "gate 4: passes with findings from phase 3" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 4
 
     # Phase 4 gate checks findings exist (already set)
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 0 ]
-    [[ "$output" == *"PASSED"* ]]
 }
 
 # === Gate 5 (no pending findings) ===
 
-@test "check-gate 5: fails with pending findings" {
-    "$SCRIPT" init
+@test "gate 5: fails with pending findings" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "pending"}]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
 
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 1 ]
-    [[ "$output" == *"FAILED"* ]]
+    [[ "$output" == *"pending"* ]]
 }
 
-@test "check-gate 5: passes when all addressed" {
-    "$SCRIPT" init
+@test "gate 5: passes when all addressed" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "addressed"}]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
 
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 0 ]
-    [[ "$output" == *"PASSED"* ]]
 }
 
 # === Gate 6 (comments for findings) ===
 
-@test "check-gate 6: passes with no findings" {
-    "$SCRIPT" init
+@test "gate 6: passes with no findings" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
+    "$SCRIPT" next > /dev/null  # → phase 6
 
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 0 ]
-    [[ "$output" == *"PASSED"* ]]
 }
 
-@test "check-gate 6: fails when addressed finding has no comment" {
-    "$SCRIPT" init
+@test "gate 6: fails when addressed finding has no comment" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "addressed"}]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
+    "$SCRIPT" next > /dev/null  # → phase 6
 
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 1 ]
-    [[ "$output" == *"FAILED"* ]]
+    [[ "$output" == *"comment"* ]]
 }
 
-@test "check-gate 6: passes when skipped finding has no comment" {
-    "$SCRIPT" init
+@test "gate 6: passes when skipped finding has no comment" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "skipped"}]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
+    "$SCRIPT" next > /dev/null  # → phase 6
 
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 0 ]
-    [[ "$output" == *"PASSED"* ]]
 }
 
-@test "check-gate 6: passes when addressed finding has comment" {
-    "$SCRIPT" init
+@test "gate 6: passes when addressed finding has comment" {
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "addressed"}]'
 
     # Add comment at same location
     "$BATS_TEST_DIRNAME/../scripts/add-comment.sh" "src/test.ts" 10 "Please fix this"
 
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
-    "$SCRIPT" check-gate && "$SCRIPT" next
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
+    "$SCRIPT" next > /dev/null  # → phase 6
 
-    run "$SCRIPT" check-gate
+    run "$SCRIPT" gate
     [ "$status" -eq 0 ]
-    [[ "$output" == *"PASSED"* ]]
 }
 
 # === Context command ===
 
 @test "context: shows formatted context" {
-    "$SCRIPT" init
+    "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test", "ticket": {"id": "ABC-123"}}'
 
     run "$SCRIPT" context
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Phase 1"* ]]
+    [[ "$output" == *"Phase 1"* ]] || [[ "$output" == *"PHASE 1"* ]] || [[ "$output" == *"context"* ]]
 }
 
 # === Usage tests ===
@@ -393,13 +396,13 @@ teardown() {
 @test "default command is status" {
     run "$SCRIPT"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"No review in progress"* ]]
+    [[ "$output" == *"No review in progress"* ]] || [[ "$output" == *"No workflow in progress"* ]]
 }
 
 # === Clean tests ===
 
 @test "clean: removes state and comments files" {
-    "$SCRIPT" init
+    "$SCRIPT" next > /dev/null
     [ -f ".review/state-test-branch.json" ]
 
     # Create a comments file

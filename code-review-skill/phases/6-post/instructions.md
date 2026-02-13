@@ -18,9 +18,8 @@ Post comments to GitHub PR.
 Each finding with status `addressed` must have a corresponding comment at the same file:line. Findings with status `skipped` don't need comments.
 
 ## When ready
-```bash
-"$SKILL_DIR/scripts/review.sh" check-gate
-```
+
+Call `"$SKILL_DIR/scripts/review.sh" next` — it checks the gate and advances automatically.
 
 ## Cleanup
 After gate passes:

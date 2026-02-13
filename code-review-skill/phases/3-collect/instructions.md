@@ -80,7 +80,5 @@ This combines `agent_findings` + `human_findings` into unified `findings` array.
 | findings array exists | Yes |
 
 ## When ready
-```bash
-"$SKILL_DIR/scripts/review.sh" check-gate
-```
-Proceed directly to REPORT (human just confirmed they're done).
+
+Call `"$SKILL_DIR/scripts/review.sh" next` — it checks the gate and advances automatically.

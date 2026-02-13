@@ -14,8 +14,8 @@ setup() {
 
     export _LOGIN_SHELL_SOURCED=1
 
-    # Initialize review state
-    "$REVIEW" init > /dev/null
+    # Initialize review state (next auto-creates state)
+    "$REVIEW" next > /dev/null
 }
 
 teardown() {

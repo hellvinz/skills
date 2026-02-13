@@ -82,7 +82,5 @@ After processing each finding, update the findings array with new statuses:
 No pending findings (all must be `addressed` or `skipped`).
 
 ## When ready
-```bash
-"$SKILL_DIR/scripts/review.sh" check-gate
-```
-Then ask user to confirm before calling `next`.
+
+Call `"$SKILL_DIR/scripts/review.sh" next` — it checks the gate and advances automatically.

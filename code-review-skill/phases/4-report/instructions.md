@@ -66,7 +66,5 @@ What would you like to do?
 `findings` must be saved as an array (can be empty).
 
 ## When ready
-```bash
-"$SKILL_DIR/scripts/review.sh" check-gate
-```
-Then **wait for user choice** before calling `next`.
+
+When user chooses to continue, call `"$SKILL_DIR/scripts/review.sh" next` — it checks the gate and advances automatically.
