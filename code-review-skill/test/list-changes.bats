@@ -80,3 +80,30 @@ teardown() {
     [[ "$output" == *"app.ts"* ]]
     [[ "$output" == *"test.tsx"* ]]
 }
+
+@test "list-changes --hotspots: shows top files by volume" {
+    run "$SCRIPT" --base main --hotspots
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"HOTSPOTS"* ]]
+    [[ "$output" == *"src/app.ts"* ]]
+}
+
+@test "list-changes --hotspots: sorts by total changes descending" {
+    # Add more lines to app.ts so it clearly has more changes
+    printf 'line1\nline2\nline3\nline4\nline5\n' >> src/app.ts
+    git add . && git commit -q -m "More lines in app.ts"
+
+    run "$SCRIPT" --base main --hotspots
+    [ "$status" -eq 0 ]
+    # app.ts should appear before test.tsx (more total changes)
+    app_line=$(echo "$output" | grep -n "app.ts" | head -1 | cut -d: -f1)
+    test_line=$(echo "$output" | grep -n "test.tsx" | head -1 | cut -d: -f1)
+    [ "$app_line" -lt "$test_line" ]
+}
+
+@test "list-changes: strips origin/ prefix from --base" {
+    run "$SCRIPT" --base origin/main
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"origin/main"* ]]
+    [[ "$output" != *"origin/origin/"* ]]
+}

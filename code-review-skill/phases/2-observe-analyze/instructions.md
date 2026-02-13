@@ -5,9 +5,9 @@ Identify what changed and detect issues.
 ## Steps
 
 ### 2.1 List changes
-Use `base` from context:
+Use `base` from context. Pass the bare branch name (e.g. `uat`, `master`), not the full ref — the script adds `origin/` automatically.
 ```bash
-"$SKILL_DIR/scripts/list-changes.sh" --base <base_branch> --json --filter ts,tsx,js,jsx
+"$SKILL_DIR/scripts/list-changes.sh" --base <branch_name> --json --filter ts,tsx,js,jsx
 ```
 
 ### 2.2 Classify scope
@@ -26,7 +26,7 @@ Run these in parallel:
 
 **Automatic detection:**
 ```bash
-"$SKILL_DIR/scripts/detect-slop.sh" --base <base_branch>
+"$SKILL_DIR/scripts/detect-slop.sh" --base <branch_name>
 ```
 
 **Load principles:**

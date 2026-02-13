@@ -13,21 +13,26 @@ set -e
 JSON_MODE=false
 FILTER=""
 BASE_BRANCH=""
+HOTSPOTS=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --json) JSON_MODE=true; shift ;;
     --filter) FILTER="$2"; shift 2 ;;
     --base) BASE_BRANCH="$2"; shift 2 ;;
+    --hotspots) HOTSPOTS=true; shift ;;
     *) shift ;;
   esac
 done
 
 if [ -z "$BASE_BRANCH" ]; then
   echo "Error: --base <branch> is required" >&2
-  echo "Usage: list-changes.sh --base <branch> [--json] [--filter ts,tsx]" >&2
+  echo "Usage: list-changes.sh --base <branch> [--json] [--filter ts,tsx] [--hotspots]" >&2
   exit 1
 fi
+
+# Strip origin/ prefix if passed (e.g. "origin/uat" → "uat")
+BASE_BRANCH="${BASE_BRANCH#origin/}"
 
 # Get list of changed files with status
 # A=Added, M=Modified, D=Deleted, R=Renamed, C=Copied
@@ -37,6 +42,30 @@ FILES=$(git diff "origin/$BASE_BRANCH...HEAD" --name-status --diff-filter=ACMR 2
 if [ -n "$FILTER" ]; then
   PATTERN="${FILTER//,/|}"
   FILES=$(echo "$FILES" | grep -E "\.($PATTERN)$" || true)
+fi
+
+if $HOTSPOTS; then
+  echo "=== HOTSPOTS (top 10 by volume) ==="
+  echo "Base: origin/$BASE_BRANCH"
+  echo ""
+
+  # Collect file stats and sort by total changes (added + deleted) descending
+  while IFS=$'\t' read -r fstatus file; do
+    [ -z "$file" ] && continue
+
+    STATS=$(git diff "origin/$BASE_BRANCH...HEAD" --numstat -- "$file" 2>/dev/null | head -1)
+    ADDED=$(echo "$STATS" | awk '{print $1}')
+    DELETED=$(echo "$STATS" | awk '{print $2}')
+    ADDED=${ADDED:-0}
+    DELETED=${DELETED:-0}
+    TOTAL=$((ADDED + DELETED))
+
+    echo "$TOTAL $file (+$ADDED / -$DELETED)"
+  done <<< "$FILES" | sort -rn | head -10 | while read -r _total rest; do
+    echo "$rest"
+  done
+
+  exit 0
 fi
 
 if $JSON_MODE; then

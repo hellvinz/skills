@@ -8,9 +8,9 @@ Let the human reviewer do their own analysis. Don't bias them with agent finding
 
 ## Show hotspots only
 
-Present the zones where most changes occurred:
+Present the zones where most changes occurred. Pass the bare branch name (e.g. `uat`, `master`), not the full ref — the script adds `origin/` automatically.
 ```bash
-"$SKILL_DIR/scripts/list-changes.sh" --base <base_branch> --hotspots
+"$SKILL_DIR/scripts/list-changes.sh" --base <branch_name> --hotspots
 ```
 
 ```markdown
