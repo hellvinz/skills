@@ -41,6 +41,11 @@ The `next` command automatically:
 - `context` — Show formatted context for current phase
 - `clean` — Remove state files
 
+## Critical Rules
+
+- **NEVER use Python, `python -c`, or inline scripts** to read or manipulate review state (`.review/` files). Always use `review.sh` commands (`get`, `set`, `next`, `gate`, `status`, `clean`, `update-finding`, `add-finding`).
+- **NEVER read or write `.review/state-*.json` directly** — the scripts handle all state management.
+
 ## Collaboration Principles
 
 1. **No judgment** — code was written in context

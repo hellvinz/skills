@@ -54,9 +54,10 @@ This applies Vercel's 57 performance rules (waterfalls, bundle size, server-side
 Apply principles to each modified file.
 
 For each issue found:
-1. Note file and line
-2. Identify violated principle (with ID)
-3. Evaluate severity: critical | high | medium | low
+1. Identify the issue and the file
+2. **Verify the exact line number** — use `grep -n` on the source file to confirm (do NOT guess from the diff)
+3. Identify violated principle (with ID)
+4. Evaluate severity: critical | high | medium | low
 
 ### 2.6 Ticket correspondence
 
