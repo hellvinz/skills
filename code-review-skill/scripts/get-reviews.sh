@@ -35,6 +35,15 @@ if gh pr view &>/dev/null; then
   PR_EXISTS=true
   REVIEWS=$(gh pr view --json reviews --jq '.reviews[] | "[\(.author.login)] \(.state): \(.body)"' 2>/dev/null || echo "")
   COMMENTS=$(gh pr view --json comments --jq '.comments[] | "[\(.author.login)]: \(.body)"' 2>/dev/null || echo "")
+
+  # Inline review comments (comments on specific lines of code)
+  PR_NUMBER=$(gh pr view --json number --jq '.number' 2>/dev/null || echo "")
+  REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || echo "")
+  INLINE_COMMENTS=""
+  if [ -n "$PR_NUMBER" ] && [ -n "$REPO" ]; then
+    INLINE_COMMENTS=$(gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate \
+      --jq '.[] | "[\(.user.login)] \(.path):\(.line // .original_line) \(.body)"' 2>/dev/null || echo "")
+  fi
 fi
 
 # Get commit messages
@@ -55,6 +64,7 @@ if $JSON_MODE; then
   "pr_exists": $PR_EXISTS,
   "reviews": $(echo "$REVIEWS" | json_escape),
   "comments": $(echo "$COMMENTS" | json_escape),
+  "inline_comments": $(echo "$INLINE_COMMENTS" | json_escape),
   "commits": $(echo "$COMMITS" | json_escape)
 }
 EOF
@@ -81,6 +91,14 @@ else
       echo "$COMMENTS"
     else
       echo "No comments."
+    fi
+    echo ""
+
+    echo "=== INLINE REVIEW COMMENTS ==="
+    if [ -n "$INLINE_COMMENTS" ]; then
+      echo "$INLINE_COMMENTS"
+    else
+      echo "No inline comments."
     fi
   else
     echo "=== PR ==="

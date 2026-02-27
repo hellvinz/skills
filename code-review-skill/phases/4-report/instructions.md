@@ -52,6 +52,27 @@ What would you like to do?
 2. **Continue** to prepare inline comments
 ```
 
+## Finding management commands
+
+When the user asks to adjust findings during discussion:
+
+```bash
+# Merge overlapping findings (source is removed, target keeps combined info)
+"$SKILL_DIR/scripts/update-finding.sh" --merge <source_id> <target_id>
+
+# Update a finding's description
+"$SKILL_DIR/scripts/update-finding.sh" --set <id> description "New description text"
+
+# Update severity or status
+"$SKILL_DIR/scripts/update-finding.sh" --set <id> severity <critical|high|medium|low>
+"$SKILL_DIR/scripts/update-finding.sh" --set <id> status <pending|addressed|skipped>
+
+# Remove a finding entirely
+"$SKILL_DIR/scripts/update-finding.sh" --remove <id>
+```
+
+After any change, re-display the updated findings table.
+
 ## User actions at this phase
 
 - **Discuss**: Let user explore/adjust findings before moving on

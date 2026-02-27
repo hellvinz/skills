@@ -4,6 +4,17 @@ Identify what changed and detect issues.
 
 ## Steps
 
+### 2.0 User instructions
+
+```bash
+"$SKILL_DIR/scripts/review.sh" get user_instructions
+```
+
+If non-null, treat these as **priority directives** for the analysis:
+- Adjust analysis scope/focus as instructed
+- Use any referenced URLs or specs as additional context
+- Flag in findings if an instruction couldn't be applied
+
 ### 2.1 List changes
 Use `base` from context. Pass the bare branch name (e.g. `uat`, `master`), not the full ref — the script adds `origin/` automatically.
 ```bash
