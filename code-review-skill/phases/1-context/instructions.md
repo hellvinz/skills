@@ -27,6 +27,18 @@ Use `base_branch` from gather-context output:
 "$SKILL_DIR/scripts/get-reviews.sh" --base <base_branch>
 ```
 
+### 1.3 Additional instructions
+
+Ask the user:
+> "Do you have additional instructions for this review? (e.g., URL to test, alternative spec, specific focus areas)"
+
+If the user provides instructions, save them:
+```bash
+"$SKILL_DIR/scripts/review.sh" set user_instructions '"Test against https://example.com/staging. Spec is in the Linear doc, not the ticket description."'
+```
+
+If none, skip — the field is optional.
+
 ## Save context
 
 After gathering all information, save it:
