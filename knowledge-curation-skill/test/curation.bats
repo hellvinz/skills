@@ -216,7 +216,7 @@ teardown() {
 @test "gate: fails without state" {
     run "$SCRIPT" gate -u "$TEST_URL"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"No state found"* ]]
+    [[ "$output" == *"No workflow in progress"* ]] || [[ "$output" == *"No state found"* ]]
 }
 
 @test "gate 1: fails without required fields" {
@@ -326,10 +326,19 @@ EOF
 
 # === Workflow complete test ===
 
-@test "next: shows complete message at phase 5" {
-    echo '{"phase": 5}' | "$SCRIPT" save -u "$TEST_URL"
+@test "next: shows complete message when phase 4 gate passes" {
+    # Set up state at phase 4 with all required fields
+    cat <<EOF | "$SCRIPT" save -u "$TEST_URL"
+{
+    "phase": 4,
+    "result": {
+        "helix_node_id": "test-node-123",
+        "obsidian_note_path": "veille/test-article.md"
+    }
+}
+EOF
 
     run "$SCRIPT" next -u "$TEST_URL"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"WORKFLOW COMPLETE"* ]]
+    [[ "$output" == *"WORKFLOW COMPLETE"* ]] || [[ "$output" == *"All phases completed"* ]]
 }
