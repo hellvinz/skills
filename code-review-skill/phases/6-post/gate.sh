@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Gate 6: Comments ready
-# Passes if each non-skipped finding has a comment at same file:line
+# Passes if each "commented" finding has a comment at same file:line
 
 STATE_FILE="$1"
 REVIEW_DIR=".review"
@@ -9,8 +9,8 @@ BRANCH_SAFE="${BRANCH//\//-}"
 
 comments_file="$REVIEW_DIR/comments-${BRANCH_SAFE}.json"
 
-# Get non-skipped findings locations
-findings=$(jq -r '.findings // [] | .[] | select(.status != "skipped") | "\(.file):\(.line)"' "$STATE_FILE" 2>/dev/null)
+# Get "commented" findings locations (skipped and addressed don't need comments)
+findings=$(jq -r '.findings // [] | .[] | select(.status == "commented") | "\(.file):\(.line)"' "$STATE_FILE" 2>/dev/null)
 
 # No findings = pass
 [[ -z "$findings" ]] && exit 0

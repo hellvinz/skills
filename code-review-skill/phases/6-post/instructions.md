@@ -15,16 +15,16 @@ Post comments to GitHub PR.
 ```
 
 ## Gate criteria
-Each finding with status `addressed` must have a corresponding comment at the same file:line. Findings with status `skipped` don't need comments.
+Each finding with status `commented` must have a corresponding comment at the same file:line. Findings with status `skipped` or `addressed` don't need comments.
 
 ## When ready
 
 Call `"$SKILL_DIR/scripts/review.sh" next` — it checks the gate and advances automatically.
 
-## Cleanup
-After gate passes:
-```bash
-"$SKILL_DIR/scripts/review.sh" clean
-```
+## After posting
 
-Review complete.
+Ask the user:
+> "Review posted. Will there be another review round after the developer addresses feedback?"
+
+- **Yes** → run `"$SKILL_DIR/scripts/review.sh" restart` — keeps findings, resets for next round. Suggest naming the session with `/rename review-{branch}` for easy resumption.
+- **No** → run `"$SKILL_DIR/scripts/review.sh" clean`

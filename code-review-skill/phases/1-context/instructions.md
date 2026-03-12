@@ -4,6 +4,20 @@ Gather the "why" behind the changes.
 
 ## Steps
 
+### 1.0 Re-review detection
+
+Check the current round:
+```bash
+"$SKILL_DIR/scripts/review.sh" get round
+```
+
+If `round > 1`: this is a follow-up review. Previous findings with status `pending` are carried over from the last round — the developer should have addressed them. Focus this round on:
+- Verifying pending findings were fixed
+- Checking for new issues introduced by the fixes
+- New changes beyond the fixes
+
+Tell the user: "This is review round N. I'll focus on whether previous feedback was addressed."
+
 ### 1.1 Parallel: Collect context
 Run these in parallel:
 

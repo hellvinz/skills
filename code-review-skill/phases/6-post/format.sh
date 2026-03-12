@@ -9,10 +9,11 @@ echo "=== Phase 6: POST ==="
 echo ""
 
 # Findings summary
-addressed=$(jq '[.findings // [] | .[] | select(.status == "addressed")] | length' "$STATE_FILE")
+commented=$(jq '[.findings // [] | .[] | select(.status == "commented")] | length' "$STATE_FILE")
 skipped=$(jq '[.findings // [] | .[] | select(.status == "skipped")] | length' "$STATE_FILE")
+addressed=$(jq '[.findings // [] | .[] | select(.status == "addressed")] | length' "$STATE_FILE")
 
-echo "Findings: $addressed addressed, $skipped skipped"
+echo "Findings: $commented commented, $addressed addressed, $skipped skipped"
 
 # Comments
 comments_file="$REVIEW_DIR/comments-${BRANCH_SAFE}.json"

@@ -11,7 +11,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-VALID_STATUSES="pending addressed skipped"
+VALID_STATUSES="pending commented skipped addressed"
 VALID_SEVERITIES="critical high medium low"
 # shellcheck disable=SC2034  # used in severity_rank()
 SEVERITY_ORDER=(critical high medium low)
@@ -22,7 +22,7 @@ usage() {
     echo "  update-finding.sh --set <id> <field> <value>" >&2
     echo "  update-finding.sh --merge <source_id> <target_id>" >&2
     echo "" >&2
-    echo "Fields: status (pending|addressed|skipped), severity (critical|high|medium|low), description" >&2
+    echo "Fields: status (pending|commented|skipped|addressed), severity (critical|high|medium|low), description" >&2
     exit 1
 }
 

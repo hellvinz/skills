@@ -39,7 +39,14 @@ The `next` command automatically:
 - `status` — Show raw state (JSON)
 - `gate` — Check gate only (without advancing)
 - `context` — Show formatted context for current phase
+- `restart` — Start new review round (keeps findings)
 - `clean` — Remove state files
+
+### Session naming
+After starting a review, rename the session so it can be resumed later:
+```
+/rename review-{branch}
+```
 
 ## Critical Rules
 

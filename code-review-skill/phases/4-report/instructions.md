@@ -65,7 +65,7 @@ When the user asks to adjust findings during discussion:
 
 # Update severity or status
 "$SKILL_DIR/scripts/update-finding.sh" --set <id> severity <critical|high|medium|low>
-"$SKILL_DIR/scripts/update-finding.sh" --set <id> status <pending|addressed|skipped>
+"$SKILL_DIR/scripts/update-finding.sh" --set <id> status <pending|commented|skipped|addressed>
 
 # Remove a finding entirely
 "$SKILL_DIR/scripts/update-finding.sh" --remove <id>

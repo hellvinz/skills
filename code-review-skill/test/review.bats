@@ -283,7 +283,7 @@ teardown() {
     [[ "$output" == *"pending"* ]]
 }
 
-@test "gate 5: passes when all addressed" {
+@test "gate 5: passes when all commented" {
     "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
     "$SCRIPT" next > /dev/null  # → phase 2
@@ -291,7 +291,7 @@ teardown() {
     "$SCRIPT" set agent_findings '[]'
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
-    "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "addressed"}]'
+    "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "commented"}]'
     "$SCRIPT" next > /dev/null  # → phase 4
     "$SCRIPT" next > /dev/null  # → phase 5
 
@@ -318,7 +318,7 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
-@test "gate 6: fails when addressed finding has no comment" {
+@test "gate 6: fails when commented finding has no comment" {
     "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
     "$SCRIPT" next > /dev/null  # → phase 2
@@ -326,7 +326,7 @@ teardown() {
     "$SCRIPT" set agent_findings '[]'
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
-    "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "addressed"}]'
+    "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "commented"}]'
     "$SCRIPT" next > /dev/null  # → phase 4
     "$SCRIPT" next > /dev/null  # → phase 5
     "$SCRIPT" next > /dev/null  # → phase 6
@@ -353,7 +353,7 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
-@test "gate 6: passes when addressed finding has comment" {
+@test "gate 6: passes when addressed finding has no comment" {
     "$SCRIPT" next > /dev/null
     "$SCRIPT" set context '{"branch": "test"}'
     "$SCRIPT" next > /dev/null  # → phase 2
@@ -362,6 +362,23 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "addressed"}]'
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
+    "$SCRIPT" next > /dev/null  # → phase 6
+
+    run "$SCRIPT" gate
+    [ "$status" -eq 0 ]
+}
+
+@test "gate 6: passes when commented finding has comment" {
+    "$SCRIPT" next > /dev/null
+    "$SCRIPT" set context '{"branch": "test"}'
+    "$SCRIPT" next > /dev/null  # → phase 2
+    "$SCRIPT" set files '["src/test.ts"]'
+    "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" next > /dev/null  # → phase 3
+    "$SCRIPT" set human_done true
+    "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "commented"}]'
 
     # Add comment at same location
     "$BATS_TEST_DIRNAME/../scripts/add-comment.sh" "src/test.ts" 10 "Please fix this"
@@ -412,5 +429,112 @@ teardown() {
     run "$SCRIPT" clean
     [ "$status" -eq 0 ]
     [ ! -f ".review/state-test-branch.json" ]
+    [ ! -f ".review/comments-test-branch.json" ]
+}
+
+# === Restart tests ===
+
+@test "restart: fails without state" {
+    run "$SCRIPT" restart
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"No review to restart"* ]]
+}
+
+@test "restart: fails if not at last phase" {
+    "$SCRIPT" next > /dev/null
+    run "$SCRIPT" restart
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"only available at phase"* ]]
+}
+
+@test "restart: resets phase to 1 and bumps round" {
+    # Advance to phase 6
+    "$SCRIPT" next > /dev/null
+    "$SCRIPT" set context '{"branch": "test"}'
+    "$SCRIPT" next > /dev/null  # → phase 2
+    "$SCRIPT" set files '["src/test.ts"]'
+    "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" next > /dev/null  # → phase 3
+    "$SCRIPT" set human_done true
+    "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "commented"}]'
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
+    "$SCRIPT" next > /dev/null  # → phase 6
+
+    run "$SCRIPT" restart
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"round 2"* ]]
+
+    phase=$(jq -r '.phase' .review/state-test-branch.json)
+    round=$(jq -r '.round' .review/state-test-branch.json)
+    [ "$phase" -eq 1 ]
+    [ "$round" -eq 2 ]
+}
+
+@test "restart: resets commented findings to pending" {
+    "$SCRIPT" next > /dev/null
+    "$SCRIPT" set context '{"branch": "test"}'
+    "$SCRIPT" next > /dev/null  # → phase 2
+    "$SCRIPT" set files '["src/test.ts"]'
+    "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" next > /dev/null  # → phase 3
+    "$SCRIPT" set human_done true
+    "$SCRIPT" set findings '[
+        {"id": 1, "file": "a.ts", "line": 10, "status": "commented"},
+        {"id": 2, "file": "b.ts", "line": 20, "status": "skipped"}
+    ]'
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
+    "$SCRIPT" next > /dev/null  # → phase 6
+
+    "$SCRIPT" restart
+
+    s1=$(jq -r '.findings[0].status' .review/state-test-branch.json)
+    s2=$(jq -r '.findings[1].status' .review/state-test-branch.json)
+    [ "$s1" = "pending" ]
+    [ "$s2" = "skipped" ]
+}
+
+@test "restart: clears phase-specific fields" {
+    "$SCRIPT" next > /dev/null
+    "$SCRIPT" set context '{"branch": "test"}'
+    "$SCRIPT" next > /dev/null  # → phase 2
+    "$SCRIPT" set files '["src/test.ts"]'
+    "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" next > /dev/null  # → phase 3
+    "$SCRIPT" set human_done true
+    "$SCRIPT" set findings '[]'
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
+    "$SCRIPT" next > /dev/null  # → phase 6
+
+    "$SCRIPT" restart
+
+    files=$(jq -r '.files // "null"' .review/state-test-branch.json)
+    agent=$(jq -r '.agent_findings // "null"' .review/state-test-branch.json)
+    human=$(jq -r '.human_findings // "null"' .review/state-test-branch.json)
+    human_done=$(jq -r '.human_done // "null"' .review/state-test-branch.json)
+    [ "$files" = "null" ]
+    [ "$agent" = "null" ]
+    [ "$human" = "null" ]
+    [ "$human_done" = "null" ]
+}
+
+@test "restart: removes comments file" {
+    "$SCRIPT" next > /dev/null
+    "$SCRIPT" set context '{"branch": "test"}'
+    "$SCRIPT" next > /dev/null  # → phase 2
+    "$SCRIPT" set files '["src/test.ts"]'
+    "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" next > /dev/null  # → phase 3
+    "$SCRIPT" set human_done true
+    "$SCRIPT" set findings '[]'
+    "$SCRIPT" next > /dev/null  # → phase 4
+    "$SCRIPT" next > /dev/null  # → phase 5
+    "$SCRIPT" next > /dev/null  # → phase 6
+
+    echo '{"comments":[]}' > ".review/comments-test-branch.json"
+    "$SCRIPT" restart
+
     [ ! -f ".review/comments-test-branch.json" ]
 }

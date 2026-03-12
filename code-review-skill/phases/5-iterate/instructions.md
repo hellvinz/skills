@@ -72,8 +72,8 @@ Draft: "{natural comment, 1-2 sentences, with doc link if relevant}"
 
 After processing each finding, update its status immediately:
 ```bash
-# After "ok" → mark addressed
-"$SKILL_DIR/scripts/update-finding.sh" --set 1 status addressed
+# After "ok" → mark commented
+"$SKILL_DIR/scripts/update-finding.sh" --set 1 status commented
 
 # After "skip" → mark skipped
 "$SKILL_DIR/scripts/update-finding.sh" --set 2 status skipped
@@ -83,7 +83,7 @@ After processing each finding, update its status immediately:
 ```
 
 ## Gate criteria
-No pending findings (all must be `addressed` or `skipped`).
+No pending findings (all must be `commented`, `skipped`, or `addressed`).
 
 ## When ready
 

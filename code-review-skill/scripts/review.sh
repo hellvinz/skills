@@ -83,6 +83,36 @@ cmd_context() {
 }
 
 #######################################
+# Restart command - new review round, keep findings
+#######################################
+cmd_restart() {
+    if [[ ! -f "$STATE_FILE" ]]; then
+        echo "No review to restart. Use 'next' to start a new review."
+        exit 1
+    fi
+
+    local phase
+    phase=$(workflow_get_phase)
+    if [[ "$phase" -ne "$TOTAL_PHASES" ]]; then
+        echo "Error: restart is only available at phase $TOTAL_PHASES (current: $phase)" >&2
+        exit 1
+    fi
+
+    jq --arg t "$(workflow_now)" '
+        .round = ((.round // 1) + 1)
+        | .phase = 1
+        | .last_updated = $t
+        | .findings = [.findings // [] | .[] | if .status == "commented" then .status = "pending" else . end]
+        | del(.files, .agent_findings, .human_findings, .human_done, .scope, .principles, .gates)
+    ' "$STATE_FILE" > "${STATE_FILE}.tmp"
+    mv "${STATE_FILE}.tmp" "$STATE_FILE"
+
+    rm -f "$REVIEW_DIR/comments-${BRANCH_SAFE}.json"
+
+    echo "Review reset to round $(jq -r '.round' "$STATE_FILE")."
+}
+
+#######################################
 # Clean command
 #######################################
 cmd_clean() {
@@ -96,7 +126,8 @@ cmd_clean() {
 #######################################
 workflow_on_complete() {
     echo "All phases completed for branch: $BRANCH"
-    echo "Use 'clean' to start fresh if needed."
+    echo "Use 'restart' to begin a new review round (keeps findings)."
+    echo "Use 'clean' to remove all state."
 }
 
 #######################################
@@ -121,6 +152,9 @@ case "$CMD" in
     get)
         workflow_get_value "$1"
         ;;
+    restart)
+        cmd_restart
+        ;;
     clean)
         cmd_clean
         ;;
@@ -132,6 +166,7 @@ case "$CMD" in
         echo "  gate                    Check gate only (without advancing)"
         echo "  context                 Show context for current phase"
         echo "  status                  Show raw state (JSON)"
+        echo "  restart                 Start new round (keeps findings)"
         echo "  clean                   Remove state and comments files"
         echo ""
         echo "Data commands:"

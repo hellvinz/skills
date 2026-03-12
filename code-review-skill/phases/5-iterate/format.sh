@@ -8,10 +8,11 @@ echo ""
 
 # Findings by status
 pending=$(jq '[.findings // [] | .[] | select(.status == "pending")] | length' "$STATE_FILE")
-addressed=$(jq '[.findings // [] | .[] | select(.status == "addressed")] | length' "$STATE_FILE")
+commented=$(jq '[.findings // [] | .[] | select(.status == "commented")] | length' "$STATE_FILE")
 skipped=$(jq '[.findings // [] | .[] | select(.status == "skipped")] | length' "$STATE_FILE")
+addressed=$(jq '[.findings // [] | .[] | select(.status == "addressed")] | length' "$STATE_FILE")
 
-echo "Progress: $addressed addressed, $skipped skipped, $pending pending"
+echo "Progress: $commented commented, $addressed addressed, $skipped skipped, $pending pending"
 echo ""
 
 # List pending findings
@@ -22,5 +23,5 @@ fi
 
 echo ""
 echo "Update findings with:"
-echo "  update-finding.sh --set <id> status addressed|skipped"
+echo "  update-finding.sh --set <id> status commented|skipped|addressed"
 echo "  update-finding.sh --remove <id>"
