@@ -8,6 +8,8 @@ files_count=$(jq '.files | length // 0' "$STATE_FILE")
 findings_type=$(jq -r '.agent_findings | type' "$STATE_FILE")
 dev_url=$(jq -r '.dev_url // empty' "$STATE_FILE")
 live_check=$(jq -r '.live_check_done // empty' "$STATE_FILE")
+a11y_check=$(jq -r '.a11y_check_done // empty' "$STATE_FILE")
+has_jsx=$(jq -r '[.files // [] | .[] | select(test("\\.(tsx|jsx|html|vue|svelte)$"))] | length > 0' "$STATE_FILE")
 
 errors=()
 
@@ -23,6 +25,12 @@ fi
 # Without a URL, there is nothing to verify live — the gate skips silently.
 if [[ -n "$dev_url" && -z "$live_check" ]]; then
   errors+=("live_check_done set (dev_url is known, run live verification via chrome-devtools-mcp on $dev_url)")
+fi
+
+# Live a11y check is required when JSX/HTML/template files are touched
+# AND a dev URL is known (otherwise no app to audit).
+if [[ -n "$dev_url" && "$has_jsx" == "true" && -z "$a11y_check" ]]; then
+  errors+=("a11y_check_done set (UI files changed, run skill chrome-devtools-mcp:a11y-debugging on $dev_url)")
 fi
 
 if [[ ${#errors[@]} -gt 0 ]]; then

@@ -68,6 +68,24 @@ Check `dev_url` from state:
 "$SKILL_DIR/scripts/review.sh" set live_check_done true
 ```
 
+### 2.B Live a11y check (mandatory when UI files changed and dev_url known)
+
+If the diff contains `.tsx`/`.jsx`/`.html`/`.vue`/`.svelte` files **and** `dev_url` is set, invoke the **`chrome-devtools-mcp:a11y-debugging`** skill on the modified pages. Static a11y checks miss almost everything that matters (focus order, contrast, label association, target size). The empirical audit via Chrome DevTools is the only reliable detector.
+
+```
+Use the chrome-devtools-mcp:a11y-debugging skill to audit
+<dev_url>/<modified-page-path> for accessibility issues.
+Focus on the elements changed by this diff:
+<list of changed UI files>
+```
+
+Add any findings returned by the skill into `agent_findings`, then mark the check done:
+```bash
+"$SKILL_DIR/scripts/review.sh" set a11y_check_done true
+```
+
+If no UI files are changed, or `dev_url` is not set, skip this step — the gate stays silent.
+
 ### 2.4 React/Next.js analysis (if applicable)
 
 If React files (.tsx/.jsx) are present in the changed files list:
@@ -124,6 +142,7 @@ After analysis, save preliminary findings:
 | Files list saved? | Required |
 | Agent findings saved? | Required (can be empty array) |
 | live_check_done set? | Required only if `dev_url` is known (otherwise the check is skipped) |
+| a11y_check_done set? | Required only if UI files changed AND `dev_url` is known |
 
 ## When ready
 
