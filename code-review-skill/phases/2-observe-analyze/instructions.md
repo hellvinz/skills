@@ -86,20 +86,22 @@ Add any findings returned by the skill into `agent_findings`, then mark the chec
 
 If no UI files are changed, or `dev_url` is not set, skip this step — the gate stays silent.
 
-### 2.4 React/Next.js analysis (if applicable)
+### 2.C React patterns (mandatory when .tsx/.jsx changed)
 
-If React files (.tsx/.jsx) are present in the changed files list:
-
-1. Filter the changed files to get only React files
-2. Invoke the `react-best-practices` skill with those specific files:
+If the diff contains `.tsx`/`.jsx` files, invoke the **`react-best-practices`** skill (Vercel) on those files. This is the single source of truth for React hooks, `memo`, `useCallback`, `useSelector`, `useMemo`, re-renders and bundle concerns — do not duplicate these checks manually.
 
 ```
-Review these files for React/Next.js performance issues using react-best-practices guidelines:
+Review these files for React/Next.js issues using react-best-practices:
 <list of .tsx/.jsx files from diff>
 Focus only on the changes, not the entire codebase.
 ```
 
-This applies Vercel's 57 performance rules (waterfalls, bundle size, server-side, re-renders) to the modified code only.
+Add the skill's findings into `agent_findings`, then mark the check done:
+```bash
+"$SKILL_DIR/scripts/review.sh" set react_check_done true
+```
+
+If no React files are in the diff, skip this step — the gate stays silent.
 
 ### 2.5 Manual analysis
 
@@ -143,6 +145,7 @@ After analysis, save preliminary findings:
 | Agent findings saved? | Required (can be empty array) |
 | live_check_done set? | Required only if `dev_url` is known (otherwise the check is skipped) |
 | a11y_check_done set? | Required only if UI files changed AND `dev_url` is known |
+| react_check_done set? | Required only if `.tsx`/`.jsx` files are in the diff |
 
 ## When ready
 

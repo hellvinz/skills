@@ -9,7 +9,9 @@ findings_type=$(jq -r '.agent_findings | type' "$STATE_FILE")
 dev_url=$(jq -r '.dev_url // empty' "$STATE_FILE")
 live_check=$(jq -r '.live_check_done // empty' "$STATE_FILE")
 a11y_check=$(jq -r '.a11y_check_done // empty' "$STATE_FILE")
+react_check=$(jq -r '.react_check_done // empty' "$STATE_FILE")
 has_jsx=$(jq -r '[.files // [] | .[] | select(test("\\.(tsx|jsx|html|vue|svelte)$"))] | length > 0' "$STATE_FILE")
+has_react=$(jq -r '[.files // [] | .[] | select(test("\\.(tsx|jsx)$"))] | length > 0' "$STATE_FILE")
 
 errors=()
 
@@ -31,6 +33,13 @@ fi
 # AND a dev URL is known (otherwise no app to audit).
 if [[ -n "$dev_url" && "$has_jsx" == "true" && -z "$a11y_check" ]]; then
   errors+=("a11y_check_done set (UI files changed, run skill chrome-devtools-mcp:a11y-debugging on $dev_url)")
+fi
+
+# React best practices check is required whenever .tsx/.jsx files change.
+# Delegated to the Vercel react-best-practices skill (covers hooks, memo,
+# useCallback, useSelector, useMemo, re-renders, bundle).
+if [[ "$has_react" == "true" && -z "$react_check" ]]; then
+  errors+=("react_check_done set (React files changed, run skill react-best-practices on the diff files)")
 fi
 
 if [[ ${#errors[@]} -gt 0 ]]; then
