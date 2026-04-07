@@ -41,6 +41,7 @@ The `next` command automatically:
 - `context` — Show formatted context for current phase
 - `restart` — Start new review round (keeps findings)
 - `clean` — Remove state files
+- `init-config` — Create `.review/config.md` from template (project-specific persistent directives: dev URL, DS reference paths, priority libs)
 
 ### Session naming
 After starting a review, rename the session so it can be resumed later:

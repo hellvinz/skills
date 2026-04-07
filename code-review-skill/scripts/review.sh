@@ -9,6 +9,7 @@
 #   ./scripts/review.sh set <k> <v>   Store JSON value
 #   ./scripts/review.sh get <k>       Retrieve JSON value
 #   ./scripts/review.sh clean         Remove state files
+#   ./scripts/review.sh init-config   Create .review/config.md from template
 
 # Determine script directory before login shell relaunch
 # Use pwd -P to resolve symlinks
@@ -113,6 +114,29 @@ cmd_restart() {
 }
 
 #######################################
+# Init-config command - bootstrap .review/config.md from template
+#######################################
+cmd_init_config() {
+    local target=".review/config.md"
+    local template="$SKILL_DIR/templates/project-config.md"
+
+    if [[ -e "$target" ]]; then
+        echo "Error: $target already exists. Refusing to overwrite." >&2
+        exit 1
+    fi
+
+    if [[ ! -f "$template" ]]; then
+        echo "Error: template not found at $template" >&2
+        exit 1
+    fi
+
+    mkdir -p "$(dirname "$target")"
+    cp "$template" "$target"
+    echo "Created $target"
+    echo "Edit it to add your dev URL, DS reference paths, and project conventions."
+}
+
+#######################################
 # Clean command
 #######################################
 cmd_clean() {
@@ -158,6 +182,9 @@ case "$CMD" in
     clean)
         cmd_clean
         ;;
+    init-config)
+        cmd_init_config
+        ;;
     *)
         echo "Usage: review.sh <command> [args]"
         echo ""
@@ -168,6 +195,7 @@ case "$CMD" in
         echo "  status                  Show raw state (JSON)"
         echo "  restart                 Start new round (keeps findings)"
         echo "  clean                   Remove state and comments files"
+        echo "  init-config             Create .review/config.md from template"
         echo ""
         echo "Data commands:"
         echo "  set <key> <json>        Store JSON value"
