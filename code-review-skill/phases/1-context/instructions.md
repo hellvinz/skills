@@ -35,6 +35,16 @@ If `load-project-config.sh` returns content, save it as **persistent project dir
 
 If it returns nothing, the review continues normally. You may optionally suggest creating one with `review.sh init-config` if the user repeatedly provides the same context (dev URL, DS reference paths) at every review — but never block on it.
 
+#### Extract dev_url
+
+If the loaded config (or `user_instructions` from step 1.3) contains a development URL, store it as a separate state field — phase 2 reads it to decide whether the live verification step is required:
+
+```bash
+"$SKILL_DIR/scripts/review.sh" set dev_url '"https://staging.example.com/path"'
+```
+
+If no URL is known (config silent, user didn't provide one), **do not set the field** — phase 2 will skip the live check entirely.
+
 Also fetch Linear ticket context if ticket ID detected in branch name (e.g., "PRA-990"):
 ```
 mcp__linear__list_documents(issueId: "PRA-990")

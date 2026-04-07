@@ -45,6 +45,29 @@ Run these in parallel:
 cat "$SKILL_DIR/principles/review-principles.md"
 ```
 
+### 2.A Live verification (mandatory when dev_url is known)
+
+Check `dev_url` from state:
+```bash
+"$SKILL_DIR/scripts/review.sh" get dev_url
+```
+
+**If `dev_url` is empty**, skip this step entirely — there is nothing to verify live without a URL. The phase 2 gate will not require `live_check_done` in this case.
+
+**If `dev_url` is set**, this step is mandatory. Open the running app via the `chrome-devtools-mcp` MCP server on the page(s) impacted by the diff. Many issues are only visible at runtime.
+
+**What to check live**:
+- Navigate to the modified page(s) under `dev_url`
+- `list_console_messages` for errors/warnings introduced by the change
+- `list_network_requests` for failed requests
+- Try the modified interaction (click, fill, navigate)
+- `take_screenshot` of the modified zone for the report
+
+**Mark the check done** before the phase 2 gate:
+```bash
+"$SKILL_DIR/scripts/review.sh" set live_check_done true
+```
+
 ### 2.4 React/Next.js analysis (if applicable)
 
 If React files (.tsx/.jsx) are present in the changed files list:
@@ -100,6 +123,7 @@ After analysis, save preliminary findings:
 | TS/JS files present? | WARN: adapt analysis |
 | Files list saved? | Required |
 | Agent findings saved? | Required (can be empty array) |
+| live_check_done set? | Required only if `dev_url` is known (otherwise the check is skipped) |
 
 ## When ready
 

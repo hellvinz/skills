@@ -6,6 +6,8 @@ STATE_FILE="$1"
 
 files_count=$(jq '.files | length // 0' "$STATE_FILE")
 findings_type=$(jq -r '.agent_findings | type' "$STATE_FILE")
+dev_url=$(jq -r '.dev_url // empty' "$STATE_FILE")
+live_check=$(jq -r '.live_check_done // empty' "$STATE_FILE")
 
 errors=()
 
@@ -15,6 +17,12 @@ fi
 
 if [[ "$findings_type" != "array" ]]; then
   errors+=("agent_findings saved as array (save with 'set agent_findings')")
+fi
+
+# Live verification is only required when a dev URL is known.
+# Without a URL, there is nothing to verify live — the gate skips silently.
+if [[ -n "$dev_url" && -z "$live_check" ]]; then
+  errors+=("live_check_done set (dev_url is known, run live verification via chrome-devtools-mcp on $dev_url)")
 fi
 
 if [[ ${#errors[@]} -gt 0 ]]; then
