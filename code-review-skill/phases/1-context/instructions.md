@@ -24,7 +24,16 @@ Run these in parallel:
 ```bash
 "$SKILL_DIR/scripts/gather-context.sh" --json
 "$SKILL_DIR/scripts/read-docs.sh"
+"$SKILL_DIR/scripts/load-project-config.sh"
 ```
+
+If `load-project-config.sh` returns content, save it as **persistent project directives** — they apply to every review on this repo and shape which mandatory checks run in phase 2:
+
+```bash
+"$SKILL_DIR/scripts/review.sh" set project_config '"<raw markdown content>"'
+```
+
+If it returns nothing, the review continues normally. You may optionally suggest creating one with `review.sh init-config` if the user repeatedly provides the same context (dev URL, DS reference paths) at every review — but never block on it.
 
 Also fetch Linear ticket context if ticket ID detected in branch name (e.g., "PRA-990"):
 ```

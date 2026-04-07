@@ -24,3 +24,10 @@ else
     echo "No context gathered yet. Run gather-context.sh and save with:"
     echo "  review.sh set context '<json>'"
 fi
+
+project_config=$(jq -r '.project_config // ""' "$STATE_FILE")
+if [[ -n "$project_config" && "$project_config" != "null" ]]; then
+    echo ""
+    echo "=== PROJECT CONFIG (.review/config.md) ==="
+    echo "$project_config"
+fi
