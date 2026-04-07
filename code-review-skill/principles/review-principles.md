@@ -99,6 +99,7 @@ The textual principles below cover what these tools do not.
 |----|-----------|--------------|
 | #13 | **Build Documentation In** | Do comments capture the business "why"? |
 | CLARITY | **Explicit Clarity (Cunningham/Fowler)** | Does the code make understanding explicit? |
+| DOCLOC | **Doc Location Convention** | New docs (SDD, ADR, guides) must follow the existing folder structure of the project. Paths referenced from root docs (`README.md`, `ARCHITECTURE.md`, `AGENTS.md`) must still resolve after moves or renames in the diff. |
 
 ---
 
