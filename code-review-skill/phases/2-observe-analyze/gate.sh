@@ -10,8 +10,10 @@ dev_url=$(jq -r '.dev_url // empty' "$STATE_FILE")
 live_check=$(jq -r '.live_check_done // empty' "$STATE_FILE")
 a11y_check=$(jq -r '.a11y_check_done // empty' "$STATE_FILE")
 react_check=$(jq -r '.react_check_done // empty' "$STATE_FILE")
+lib_check=$(jq -r '.lib_check_done // empty' "$STATE_FILE")
 has_jsx=$(jq -r '[.files // [] | .[] | select(test("\\.(tsx|jsx|html|vue|svelte)$"))] | length > 0' "$STATE_FILE")
 has_react=$(jq -r '[.files // [] | .[] | select(test("\\.(tsx|jsx)$"))] | length > 0' "$STATE_FILE")
+has_source=$(jq -r '[.files // [] | .[] | select(test("\\.(ts|tsx|js|jsx|mjs|cjs)$"))] | length > 0' "$STATE_FILE")
 
 errors=()
 
@@ -40,6 +42,13 @@ fi
 # useCallback, useSelector, useMemo, re-renders, bundle).
 if [[ "$has_react" == "true" && -z "$react_check" ]]; then
   errors+=("react_check_done set (React files changed, run skill react-best-practices on the diff files)")
+fi
+
+# Library API verification is required whenever JS/TS source changes.
+# The agent decides whether to actually call context7 (depending on imports
+# present in the diff) and sets the field to true or "skipped: <reason>".
+if [[ "$has_source" == "true" && -z "$lib_check" ]]; then
+  errors+=("lib_check_done set (verify library API usage via context7 MCP, or set to \"skipped: <reason>\")")
 fi
 
 if [[ ${#errors[@]} -gt 0 ]]; then

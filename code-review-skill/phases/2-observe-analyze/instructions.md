@@ -103,6 +103,26 @@ Add the skill's findings into `agent_findings`, then mark the check done:
 
 If no React files are in the diff, skip this step — the gate stays silent.
 
+### 2.D Library API verification (mandatory when JS/TS source changes)
+
+Before flagging or proposing a fix that uses an external library API (hook, builder, helper, lifecycle method), verify the API exists in the version used by the project via the **`context7`** MCP server. Training data drifts: XState v4 vs v5, React 18 vs 19, Storybook 9 vs 10 all break this assumption.
+
+**Workflow**:
+1. Identify external library imports in the diff (non-relative imports — e.g. `xstate`, `@xstate/react`, `react`, `next`, etc.)
+2. If `project_config.priority_libs` lists libraries, prioritise those
+3. For each relevant lib, call `context7.resolve-library-id` then `query-docs` with the version and the API you're about to discuss
+4. Use the fetched docs to ground the finding (cite the version)
+
+**Mark the check done** before the gate:
+```bash
+"$SKILL_DIR/scripts/review.sh" set lib_check_done true
+```
+
+If the diff contains no external library usage worth verifying (pure refactor, internal code only), record the skip explicitly:
+```bash
+"$SKILL_DIR/scripts/review.sh" set lib_check_done '"skipped: no external API usage in diff"'
+```
+
 ### 2.5 Manual analysis
 
 Apply principles to each modified file.
@@ -146,6 +166,7 @@ After analysis, save preliminary findings:
 | live_check_done set? | Required only if `dev_url` is known (otherwise the check is skipped) |
 | a11y_check_done set? | Required only if UI files changed AND `dev_url` is known |
 | react_check_done set? | Required only if `.tsx`/`.jsx` files are in the diff |
+| lib_check_done set? | Required if any JS/TS source file is in the diff (true after context7 verification, or explicit "skipped: <reason>") |
 
 ## When ready
 

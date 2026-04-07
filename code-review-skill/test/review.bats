@@ -163,6 +163,7 @@ teardown() {
     # Phase 2 needs files + agent_findings
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
 
     phase=$(jq -r '.phase' .review/state-test-branch.json)
@@ -199,6 +200,30 @@ teardown() {
 
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
+    run "$SCRIPT" gate
+    [ "$status" -eq 0 ]
+}
+
+@test "gate 2: requires lib_check_done when source files present" {
+    "$SCRIPT" next > /dev/null
+    "$SCRIPT" set context '{"branch": "test"}'
+    "$SCRIPT" next > /dev/null  # → phase 2
+
+    "$SCRIPT" set files '["src/test.ts"]'
+    "$SCRIPT" set agent_findings '[]'
+    run "$SCRIPT" gate
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"lib_check_done"* ]]
+}
+
+@test "gate 2: skips lib_check_done when only docs change" {
+    "$SCRIPT" next > /dev/null
+    "$SCRIPT" set context '{"branch": "test"}'
+    "$SCRIPT" next > /dev/null  # → phase 2
+
+    "$SCRIPT" set files '["README.md"]'
+    "$SCRIPT" set agent_findings '[]'
     run "$SCRIPT" gate
     [ "$status" -eq 0 ]
 }
@@ -211,6 +236,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
 
     run "$SCRIPT" gate
@@ -224,6 +250,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
 
     "$SCRIPT" set human_done true
@@ -238,6 +265,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
 
     "$SCRIPT" set human_done true
@@ -254,6 +282,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[]'
@@ -272,6 +301,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "pending"}]'
@@ -289,6 +319,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "commented"}]'
@@ -307,6 +338,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[]'
@@ -324,6 +356,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "commented"}]'
@@ -342,6 +375,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "skipped"}]'
@@ -359,6 +393,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "addressed"}]'
@@ -376,6 +411,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "commented"}]'
@@ -454,6 +490,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[{"id": 1, "file": "src/test.ts", "line": 10, "status": "commented"}]'
@@ -477,6 +514,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[
@@ -501,6 +539,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[]'
@@ -526,6 +565,7 @@ teardown() {
     "$SCRIPT" next > /dev/null  # → phase 2
     "$SCRIPT" set files '["src/test.ts"]'
     "$SCRIPT" set agent_findings '[]'
+    "$SCRIPT" set lib_check_done true
     "$SCRIPT" next > /dev/null  # → phase 3
     "$SCRIPT" set human_done true
     "$SCRIPT" set findings '[]'
