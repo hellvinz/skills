@@ -11,9 +11,12 @@ live_check=$(jq -r '.live_check_done // empty' "$STATE_FILE")
 a11y_check=$(jq -r '.a11y_check_done // empty' "$STATE_FILE")
 react_check=$(jq -r '.react_check_done // empty' "$STATE_FILE")
 lib_check=$(jq -r '.lib_check_done // empty' "$STATE_FILE")
+ds_check=$(jq -r '.ds_check_done // empty' "$STATE_FILE")
 has_jsx=$(jq -r '[.files // [] | .[] | select(test("\\.(tsx|jsx|html|vue|svelte)$"))] | length > 0' "$STATE_FILE")
 has_react=$(jq -r '[.files // [] | .[] | select(test("\\.(tsx|jsx)$"))] | length > 0' "$STATE_FILE")
 has_source=$(jq -r '[.files // [] | .[] | select(test("\\.(ts|tsx|js|jsx|mjs|cjs)$"))] | length > 0' "$STATE_FILE")
+has_styles=$(jq -r '[.files // [] | .[] | select(test("\\.(css|scss|sass|less|styl|tsx|jsx|vue|svelte)$"))] | length > 0' "$STATE_FILE")
+has_ds_paths=$(jq -r '(.project_config // "") | test("ds_reference_paths:[[:space:]]*\\n[[:space:]]*-")' "$STATE_FILE")
 
 errors=()
 
@@ -49,6 +52,13 @@ fi
 # present in the diff) and sets the field to true or "skipped: <reason>".
 if [[ "$has_source" == "true" && -z "$lib_check" ]]; then
   errors+=("lib_check_done set (verify library API usage via context7 MCP, or set to \"skipped: <reason>\")")
+fi
+
+# DS token grep is required when style-bearing files change AND the project
+# config lists ds_reference_paths to grep against. Without reference paths
+# the check is skipped — there is nowhere to look up the valid token.
+if [[ "$has_styles" == "true" && "$has_ds_paths" == "true" && -z "$ds_check" ]]; then
+  errors+=("ds_check_done set (style values changed, grep ds_reference_paths for valid tokens to propose)")
 fi
 
 if [[ ${#errors[@]} -gt 0 ]]; then

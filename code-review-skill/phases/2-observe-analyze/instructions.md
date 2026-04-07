@@ -123,6 +123,24 @@ If the diff contains no external library usage worth verifying (pure refactor, i
 "$SKILL_DIR/scripts/review.sh" set lib_check_done '"skipped: no external API usage in diff"'
 ```
 
+### 2.E DS token grep (mandatory when style values change and reference paths exist)
+
+If the diff contains style-bearing files (`.css`/`.scss`/`.tsx`/etc.) **and** `project_config` lists `ds_reference_paths`, grep those paths to find the valid design system token for any hardcoded value (color, spacing, font size, mixin) introduced by the diff.
+
+The point: a finding that just says "hardcoded color, use a token" is unactionable. A finding that says "hardcoded `#fff` — use `$colorBrandPrimaryWhite` (defined at `~/Projects/.../tokens/_colors.scss:42`)" is actionable.
+
+**Workflow**:
+1. Read `ds_reference_paths` from `project_config`
+2. For each hardcoded value in the diff (regex: hex colors, `var(--*)`, `px`/`rem` literals, `Sm`/`Md`/`Lg` mixin variants), grep the reference paths for the matching token
+3. Include the token name and source file in the corresponding finding
+
+**Mark the check done**:
+```bash
+"$SKILL_DIR/scripts/review.sh" set ds_check_done true
+```
+
+If no `ds_reference_paths` are configured, skip this step entirely — the gate stays silent.
+
 ### 2.5 Manual analysis
 
 Apply principles to each modified file.
@@ -167,6 +185,7 @@ After analysis, save preliminary findings:
 | a11y_check_done set? | Required only if UI files changed AND `dev_url` is known |
 | react_check_done set? | Required only if `.tsx`/`.jsx` files are in the diff |
 | lib_check_done set? | Required if any JS/TS source file is in the diff (true after context7 verification, or explicit "skipped: <reason>") |
+| ds_check_done set? | Required only if style-bearing files changed AND `project_config` lists `ds_reference_paths` |
 
 ## When ready
 
