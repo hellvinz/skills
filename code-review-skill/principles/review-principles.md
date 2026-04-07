@@ -113,6 +113,14 @@ The textual principles below cover what these tools do not.
 
 ---
 
+## Internationalisation
+
+| ID | Principle | Key question |
+|----|-----------|--------------|
+| I18N | **No Hardcoded UI Strings** | If the project has a translation function (`t()`, `i18n.t()`, `useTranslation`, etc.), every new user-visible string must go through it. New English literals introduced in JSX/templates are a finding. |
+
+---
+
 ## Security
 
 | ID | Principle | Key question |
