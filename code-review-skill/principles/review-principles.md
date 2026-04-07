@@ -78,6 +78,7 @@ The textual principles below cover what these tools do not.
 | #69 | **Design to Test** | Is the code testable? |
 | #93 | **Test State Coverage** | Do tests cover states, not just lines? |
 | #94 | **Find Bugs Once** | Does a fixed bug have a regression test? |
+| TVN | **Test Value & Naming** | Does the test name describe the **expected user behaviour** (not "renders correctly", not "returns true if conditions met")? Does the test verify observable behaviour rather than asserting JSX structure, internal state, or each code branch in isolation? Does it match the style of neighbouring tests in the same file? **Especially relevant when tests are implemented with an agent**: agents tend to mirror the implementation (one test per branch, assertions on internals) and rarely describe what the user actually experiences. |
 
 ---
 
