@@ -159,6 +159,21 @@ The textual principles below cover what these tools do not.
 - Factory/Builder for simple objects
 - "Just in case" abstraction
 
+### Slop in test files
+
+Test files have their own slop patterns: organisational comments and titles that re-describe what the AST already shows.
+
+```javascript
+// === Hoisted mocks — must be declared before any vi.mock calls ===  → SLOP
+// === vi.mock calls ===                                              → SLOP
+// === Tests ===                                                      → SLOP
+// ----------------------------------------                           → SLOP
+```
+
+`vi.hoisted()` and `vi.mock()` are self-documenting; the test structure (`describe`/`it`) speaks for itself. Section separators add noise without adding meaning.
+
+Test titles that just name the React component or repeat the prop being passed (`it('renders the controls-panel root')`, `it('renders the slider with correct props')`) belong to the same family — see the **TVN** principle in the Testing section.
+
 ### Slop commit messages
 
 ❌ "Updated UserService to handle validation by changing the validateUser method to check email format"
