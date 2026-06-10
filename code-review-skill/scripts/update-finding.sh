@@ -22,7 +22,7 @@ usage() {
     echo "  update-finding.sh --set <id> <field> <value>" >&2
     echo "  update-finding.sh --merge <source_id> <target_id>" >&2
     echo "" >&2
-    echo "Fields: status (pending|commented|skipped|addressed), severity (critical|high|medium|low), description" >&2
+    echo "Fields: status (pending|commented|skipped|addressed), severity (critical|high|medium|low), description, line" >&2
     exit 1
 }
 
@@ -102,19 +102,27 @@ cmd_set() {
                 exit 1
             fi
             ;;
+        line)
+            if ! [[ "$value" =~ ^[0-9]+$ ]]; then
+                echo "Error: Line must be a positive integer" >&2
+                exit 1
+            fi
+            ;;
         *)
-            echo "Error: Unknown field '$field'. Valid fields: status, severity, description" >&2
+            echo "Error: Unknown field '$field'. Valid fields: status, severity, description, line" >&2
             exit 1
             ;;
     esac
 
-    # Update field
+    # Update field (line is stored as a number, others as strings)
     local updated
     updated=$(echo "$findings" | jq \
         --argjson id "$id" \
         --arg field "$field" \
         --arg value "$value" '
-        map(if .id == $id then . + {($field): $value} else . end)
+        map(if .id == $id
+            then . + {($field): (if $field == "line" then ($value | tonumber) else $value end)}
+            else . end)
     ')
 
     "$SCRIPT_DIR/review.sh" set findings "$updated"

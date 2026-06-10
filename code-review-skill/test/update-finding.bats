@@ -213,3 +213,20 @@ teardown() {
     [ "$status" -eq 1 ]
     [[ "$output" == *"Usage:"* ]]
 }
+
+@test "update-finding: --set line updates the line as a number" {
+    run "$SCRIPT" --set 2 line 645
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Finding #2 line → 645"* ]]
+
+    line=$("$REVIEW" get findings | jq '.[] | select(.id == 2) | .line')
+    [ "$line" = "645" ]
+    type=$("$REVIEW" get findings | jq -r '.[] | select(.id == 2) | .line | type')
+    [ "$type" = "number" ]
+}
+
+@test "update-finding: --set line rejects non-integer values" {
+    run "$SCRIPT" --set 2 line abc
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Line must be a positive integer"* ]]
+}
