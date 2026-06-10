@@ -6,6 +6,16 @@
 #   update-finding.sh --remove <id>
 #   update-finding.sh --set <id> <field> <value>
 #   update-finding.sh --merge <source_id> <target_id>
+#
+# Fields: status (pending|commented|skipped|addressed),
+#         severity (critical|high|medium|low), description, line
+# IDs are renumbered after --remove/--merge — re-check them before reuse.
+
+# --help: print the header doc block of this script
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
+    exit 0
+fi
 
 set -e
 

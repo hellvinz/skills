@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # read-docs.sh - Read project documentation files
 # Returns content of CLAUDE.md, AGENTS.md, ARCHITECTURE.md, and ADRs
+# --help: print the header doc block of this script
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
+    exit 0
+fi
+
 set -e
 
 JSON_MODE=false

@@ -7,6 +7,12 @@
 # Used by phase 1 to inject project-specific persistent directives
 # (dev URL, DS reference paths, priority libs, MCP availability hints).
 
+# --help: print the header doc block of this script
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
+    exit 0
+fi
+
 set -e
 
 CONFIG_FILE=".review/config.md"

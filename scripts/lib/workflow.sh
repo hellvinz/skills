@@ -304,7 +304,13 @@ workflow_set_value() {
     # printf, not echo: under zsh login shells echo interprets backslash
     # escapes (\n, \t) and corrupts JSON string values
     if ! printf '%s' "$json" | jq -e . > /dev/null 2>&1; then
-        echo "Error: Invalid JSON" >&2
+        {
+            echo "Error: Invalid JSON for key '$key'"
+            printf '%s' "$json" | jq . 2>&1 | head -2 | sed 's/^/  jq: /' || true
+            echo "Hint: pass ONE JSON value as a single argument:"
+            echo "  set $key '\"some text\"'      set $key '{\"a\": 1}'"
+            echo "  set $key \"\$(jq -Rs . < file)\"   # file content as JSON string"
+        } >&2
         exit 1
     fi
 

@@ -605,3 +605,11 @@ teardown() {
     run env -u _LOGIN_SHELL_SOURCED SHELL=/bin/bash "$SCRIPT" set k '"v"'
     [ "$status" -ne 0 ]
 }
+
+@test "set: invalid JSON error includes the key and a quoting hint" {
+    "$SCRIPT" next > /dev/null
+    run "$SCRIPT" set my_key 'not json'
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Invalid JSON for key 'my_key'"* ]]
+    [[ "$output" == *"Hint"* ]]
+}

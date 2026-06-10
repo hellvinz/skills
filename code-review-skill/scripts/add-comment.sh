@@ -2,9 +2,19 @@
 # add-comment.sh - Add a review comment to .review/comments-{branch}.json
 # Usage: add-comment.sh <path> <line> <body>
 #        add-comment.sh --list
+#        add-comment.sh --remove <N>
 #        add-comment.sh --clear
 #
+# Anchor <line> to a line that is part of the PR diff — comments outside the
+# diff are posted as general comments instead of inline (see post-comments.sh).
+#
 # Note: No login shell needed - this script only uses git, jq, mktemp
+
+# --help: print the header doc block of this script
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
+    exit 0
+fi
 
 set -euo pipefail
 

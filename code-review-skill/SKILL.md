@@ -49,10 +49,15 @@ After starting a review, rename the session so it can be resumed later:
 /rename review-{branch}
 ```
 
-## Critical Rules
+## Working with the scripts
 
-- **NEVER use Python, `python -c`, or inline scripts** to read or manipulate review state (`.review/` files). Always use `review.sh` commands (`get`, `set`, `next`, `gate`, `status`, `clean`, `update-finding`, `add-finding`).
-- **NEVER read or write `.review/state-*.json` directly** — the scripts handle all state management.
+The scripts are the **only interface** to review state — internals (`.review/*.json`, `scripts/*.sh` sources) are deliberately hidden so state stays deterministic. Reading or manipulating them directly (Python one-liners, `jq` on state files, grepping script sources) silently corrupts state or leads you to depend on implementation details.
+
+**When a command fails:**
+
+1. Run it again with `--help` — every script prints its usage, arguments and pitfalls
+2. Fix your invocation and retry once
+3. Still failing? Show the user the exact command and its full output, then ask how to proceed — do not work around the interface
 
 ## Collaboration Principles
 

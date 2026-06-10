@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 # post-comments.sh - Post review comments from .review/comments-{branch}.json
 # Usage: post-comments.sh [--dry-run]
+#
+# Comments anchored to a file:line present in the PR diff are posted inline;
+# any other comment falls back to the review body as a general comment.
+# Submits a single COMMENT review with everything.
+
+# --help: print the header doc block of this script
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
+    exit 0
+fi
 
 # Relaunch as user's login shell to get aliases (e.g., gh with pass-cli)
 if [ -z "$_LOGIN_SHELL_SOURCED" ]; then

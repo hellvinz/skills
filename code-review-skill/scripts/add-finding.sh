@@ -3,6 +3,15 @@
 # Used in Phase 3: COLLECT
 #
 # Usage: add-finding.sh '{"file": "src/api.ts", "description": "...", "severity": "high"}'
+#
+# Required: file, description, severity (critical|high|medium|low)
+# Optional: line (number) — needed if the finding will become an inline comment
+
+# --help: print the header doc block of this script
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
+    exit 0
+fi
 
 set -e
 

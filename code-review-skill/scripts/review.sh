@@ -10,6 +10,17 @@
 #   ./scripts/review.sh get <k>       Retrieve JSON value
 #   ./scripts/review.sh clean         Remove state files
 #   ./scripts/review.sh init-config   Create .review/config.md from template
+#
+# set takes ONE JSON value as a single argument — quote it for the shell:
+#   review.sh set my_key '"some text"'
+#   review.sh set my_key '{"a": 1, "b": [2, 3]}'
+#   review.sh set my_key "$(jq -Rs . < file.md)"   # store a file as a JSON string
+
+# --help: print the header doc block of this script
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
+    exit 0
+fi
 
 # Determine script directory before login shell relaunch
 # Use pwd -P to resolve symlinks

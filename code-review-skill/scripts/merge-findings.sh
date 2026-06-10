@@ -4,6 +4,12 @@
 #
 # Usage: merge-findings.sh
 
+# --help: print the header doc block of this script
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
+    exit 0
+fi
+
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
