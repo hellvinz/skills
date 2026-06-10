@@ -301,7 +301,9 @@ workflow_set_value() {
         exit 1
     fi
 
-    if ! echo "$json" | jq -e . > /dev/null 2>&1; then
+    # printf, not echo: under zsh login shells echo interprets backslash
+    # escapes (\n, \t) and corrupts JSON string values
+    if ! printf '%s' "$json" | jq -e . > /dev/null 2>&1; then
         echo "Error: Invalid JSON" >&2
         exit 1
     fi
@@ -351,7 +353,7 @@ workflow_save_state() {
         exit 1
     fi
 
-    if ! echo "$input_json" | jq -e . > /dev/null 2>&1; then
+    if ! printf '%s' "$input_json" | jq -e . > /dev/null 2>&1; then
         echo "Error: Invalid JSON provided" >&2
         exit 1
     fi
@@ -369,9 +371,9 @@ workflow_save_state() {
 
     # Deep merge
     local new_state
-    new_state=$(echo "$current_state" | jq --argjson input "$input_json" --arg now "$now" \
+    new_state=$(printf '%s' "$current_state" | jq --argjson input "$input_json" --arg now "$now" \
         '. * $input | .last_updated = $now')
 
-    echo "$new_state" > "$WORKFLOW_STATE_FILE"
+    printf '%s\n' "$new_state" > "$WORKFLOW_STATE_FILE"
     echo "State saved."
 }

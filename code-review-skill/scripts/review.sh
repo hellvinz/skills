@@ -22,7 +22,8 @@ fi
 if [ -z "$_LOGIN_SHELL_SOURCED" ]; then
   export _LOGIN_SHELL_SOURCED=1
   "$SHELL" -l "$0" "$@" 2>&1 | sed $'s/\x1b][0-9]*;[^\x07]*\x07//g'
-  exit $?
+  # exit $? would return sed's status (always 0); take the script's instead
+  exit "${PIPESTATUS[0]}"
 fi
 
 set -euo pipefail

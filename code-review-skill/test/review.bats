@@ -578,3 +578,30 @@ teardown() {
 
     [ ! -f ".review/comments-test-branch.json" ]
 }
+
+# === Escape-safety and exit-status tests ===
+
+@test "set: preserves backslash escapes in JSON strings when body runs under zsh" {
+    command -v zsh > /dev/null || skip "zsh not available"
+    "$SCRIPT" next > /dev/null
+
+    run env _LOGIN_SHELL_SOURCED=1 zsh "$SCRIPT" set test_key '"line1\nline2 with spaces"'
+    [ "$status" -eq 0 ]
+
+    run env _LOGIN_SHELL_SOURCED=1 zsh "$SCRIPT" get test_key
+    [[ "$output" == *"line2 with spaces"* ]]
+}
+
+@test "set: roundtrips JSON string with escapes under bash" {
+    "$SCRIPT" next > /dev/null
+    run "$SCRIPT" set test_key '"a\nb\tc"'
+    [ "$status" -eq 0 ]
+    raw=$(jq -c '.test_key' .review/state-test-branch.json)
+    [ "$raw" = '"a\nb\tc"' ]
+}
+
+@test "login shell relaunch propagates the script exit status, not sed's" {
+    # No state file: set must fail — before the PIPESTATUS fix this exited 0
+    run env -u _LOGIN_SHELL_SOURCED SHELL=/bin/bash "$SCRIPT" set k '"v"'
+    [ "$status" -ne 0 ]
+}
