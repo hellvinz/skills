@@ -6,7 +6,8 @@
 if [ -z "$_LOGIN_SHELL_SOURCED" ]; then
   export _LOGIN_SHELL_SOURCED=1
   "$SHELL" -l "$0" "$@" 2>&1 | sed $'s/\x1b][0-9]*;[^\x07]*\x07//g'
-  exit $?
+  # exit $? would return sed's status (always 0); take the script's instead
+  exit "${PIPESTATUS[0]}"
 fi
 
 set -euo pipefail
@@ -102,8 +103,9 @@ for i in $(seq 0 $((COMMENT_COUNT - 1))); do
     PATH_VAL=$(jq -r ".comments[$i].path" "$COMMENTS_FILE")
     LINE_VAL=$(jq -r ".comments[$i].line" "$COMMENTS_FILE")
 
-    # Lookup position in map
-    POSITION=$(grep "^${PATH_VAL}:${LINE_VAL}:" "$POSITION_MAP" | cut -d: -f3 | head -1)
+    # Lookup position in map (grep fails when the line is not in the diff —
+    # must not kill the script under set -e, the general-comment fallback handles it)
+    POSITION=$(grep "^${PATH_VAL}:${LINE_VAL}:" "$POSITION_MAP" | cut -d: -f3 | head -1 || true)
 
     # Preview (truncate body for display)
     BODY_PREVIEW=$(jq -r ".comments[$i].body" "$COMMENTS_FILE" | head -1 | cut -c1-70)
@@ -174,7 +176,7 @@ rm -f "${PAYLOAD_FILE}.final"
 if [[ $RESULT -eq 0 ]]; then
     REVIEW_ID=$(echo "$RESPONSE" | jq -r '.id // "unknown"')
     echo "Review submitted (ID: $REVIEW_ID)"
-    echo "Done: $FINAL_COUNT comments posted"
+    echo "Done: $((INLINE_COUNT + GENERAL_COUNT)) comments posted"
 else
     ERROR_MSG=$(echo "$RESPONSE" | jq -r '.message // .errors[0].message // "Unknown error"' 2>/dev/null || echo "$RESPONSE")
     echo "FAILED: $ERROR_MSG"
